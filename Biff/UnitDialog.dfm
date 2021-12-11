@@ -97,7 +97,7 @@ object FormDialog: TFormDialog
     Text = '50000'
   end
   object CheckBoxAdv: TCheckBox
-    Left = 120
+    Left = 128
     Top = 336
     Width = 73
     Height = 17
@@ -152,11 +152,11 @@ object FormDialog: TFormDialog
     Text = '1000'
   end
   object CheckBoxInflation: TCheckBox
-    Left = 56
+    Left = 8
     Top = 336
-    Width = 65
+    Width = 113
     Height = 17
-    Caption = 'Inflation'
+    Caption = 'Adjust for Inflation?'
     TabOrder = 10
   end
   object RadioGroupBiff: TRadioGroup
