@@ -15,6 +15,7 @@ type
   TRatio = record
     VOOPerc, UPROPerc: real;   // 0.00, 0.01, ..0.99, 1.00
     Total, Bankruptcy: integer;
+    R0, R100: integer;          // New for count outside range
     FRatio: real;  // Bankruptcy / Total ??
   end;
   TRatioArray =  array [0..100] of TRatio;
@@ -32,7 +33,9 @@ type
     FUPROBankr: integer;    // maybe not
     RatioForDay: array [0..100] of TRatioForDay;
   end;
-    
+
+  TTable = array of TRatioDayArray;
+  
 type
   TForm1 = class(TForm)
     Memo1: TMemo;
@@ -131,6 +134,7 @@ type
     procedure StartTimer(AStr: string);
     function TableIsCorrect: boolean;
     procedure CovertTableToTxt;
+    function CorrectPerc(ACapital: real; ANumDay, ACurDay, AStepDay: integer; var ATable: TTable): real;  // New correct percent
 
 
   //  procedure GetTableName;
@@ -757,7 +761,7 @@ begin
   Total:= Total + InnerNumSim;
   FRatio:= Bankruptcy / Total;
  // Memo1.Lines.Add(Format('Ratio: %d , %f ', [ACurRatio, FRatio * 100]));
- end; 
+ end;
 end;
 
 begin
@@ -1362,10 +1366,64 @@ begin
   CloseFile(F);
 end;
 
-
 procedure TForm1.ButtonConvertTableClick(Sender: TObject);
 begin
   CovertTableToTxt;
+end;
+
+function TForm1.CorrectPerc(ACapital: real; ANumDay, ACurDay, AStepDay: integer;
+                            var ATable: TTable): real;  // New correct percent
+ {
+procedure CalcNumBankruptcy(AInnerNumSim, ACurRatio: integer);
+var i, k, y, Index, NumBlock: integer;
+  TotalCapital, UPROPart: extended;
+  CurVOOPerc, CurUPROPerc: real;
+  label ZeroCapital;
+begin
+  NumBlock:= ANumDay div AStepDay;
+  with StartRatioArray[ACurRatio] do begin
+   for i:= 1 to AInnerNumSim do begin
+    TotalCapital:= ACapital;
+    for y:= NumBlock downto 1 do begin
+      if y = NumBlock then begin           // first block
+        CurVOOPerc:= VOOPerc;
+        CurUPROPerc:= UPROPerc;
+      end else begin                     // all other block get Ratio from Table
+        CurUPROPerc:= FindTableRatio(TotalCapital, y * AStepDay) / 100;
+        CurVOOPerc:= 1 - CurUPROPerc;
+      end;
+      for k:= 1 to AStepDay do begin
+        Index:= Random(N);
+        with PriceData[Index] do begin
+          UPROPart:= CurUPROPerc * UPRO;
+          if IsBankruptcy then begin
+            if Random(UPROBankr) = 0 then begin
+              Inc(NumBankr);
+              UPROPart:= 0;
+            end;
+          end;
+          TotalCapital:= TotalCapital * (CurVOOPerc * VOO + UPROPart) - ARasxod;
+          if TotalCapital <= 0 then begin
+            Inc(Bankruptcy);
+            TotalCapital:= 0;
+            Goto ZeroCapital;
+            //Break;
+          end;
+        end;
+      end;
+    end;
+    ZeroCapital://
+  end;
+  // Total_EV:= Total_EV + TotalCapital;     if need EV
+  Total:= Total + InnerNumSim;
+  FRatio:= Bankruptcy / Total;
+ // Memo1.Lines.Add(Format('Ratio: %d , %f ', [ACurRatio, FRatio * 100]));
+ end;
+end;
+   }
+
+begin
+
 end;
 
 end.
