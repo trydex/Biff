@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Math, INIFiles, ComCtrls, ExtCtrls, UnitDialog;
+  Dialogs, StdCtrls, Math, INIFiles, ComCtrls, ExtCtrls, UnitDialog, Utils;
 
 type
   TPriceData = record
@@ -88,6 +88,7 @@ type
   public
     { Public declarations }
 
+    Utils: TUtils;
     PriceData: array of TPriceData;
     StartCapital: extended;
     Rasxod: extended;
@@ -147,6 +148,10 @@ implementation
 procedure TForm1.FormCreate(Sender: TObject);
 var i: integer;
 begin
+  // Update decimal separator only for currect application.
+  Application.UpdateFormatSettings := false;
+  DecimalSeparator := '.';
+  
   LoadIniFile;
   GetAllParameter;
   OpenPriceFile;
@@ -225,7 +230,8 @@ begin
          Memo1.Lines.Add(S);
          Exit;
        end;     }
-      PriceDate:= StrToDate(CurStr);
+
+      PriceDate:= Utils.StrToDateEx(CurStr);
       CurStr:= GetFirstString(S);
       VOO:= StrToFloat(CurStr);
       CurStr:= GetFirstString(S);
