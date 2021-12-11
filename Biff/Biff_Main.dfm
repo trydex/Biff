@@ -1,10 +1,10 @@
 object Form1: TForm1
-  Left = 396
-  Top = 273
+  Left = 215
+  Top = 235
   BorderStyle = bsSingle
-  Caption = 'Biff'
+  Caption = 'Biff v.1.10'
   ClientHeight = 629
-  ClientWidth = 674
+  ClientWidth = 789
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -12,6 +12,8 @@ object Form1: TForm1
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   OldCreateOrder = False
+  Position = poScreenCenter
+  OnClose = FormClose
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PixelsPerInch = 96
@@ -75,8 +77,8 @@ object Form1: TForm1
   object Memo1: TMemo
     Left = 224
     Top = 8
-    Width = 441
-    Height = 593
+    Width = 553
+    Height = 569
     ScrollBars = ssBoth
     TabOrder = 0
   end
@@ -114,7 +116,7 @@ object Form1: TForm1
   end
   object ButtonTest: TButton
     Left = 16
-    Top = 520
+    Top = 528
     Width = 185
     Height = 25
     Caption = '100% VOO or 100% UPRO'
@@ -124,7 +126,7 @@ object Form1: TForm1
   end
   object ButtonClearMemo: TButton
     Left = 112
-    Top = 560
+    Top = 568
     Width = 97
     Height = 25
     Caption = 'Clear Memo'
@@ -150,7 +152,7 @@ object Form1: TForm1
   end
   object CheckBoxRebalance: TCheckBox
     Left = 16
-    Top = 496
+    Top = 504
     Width = 153
     Height = 17
     Caption = 'Rebalance after +- %'
@@ -159,7 +161,7 @@ object Form1: TForm1
   end
   object EditRePerc: TEdit
     Left = 176
-    Top = 496
+    Top = 504
     Width = 33
     Height = 21
     TabOrder = 10
@@ -246,17 +248,17 @@ object Form1: TForm1
     TabOrder = 19
   end
   object CheckBoxInflation: TCheckBox
-    Left = 64
-    Top = 472
-    Width = 73
+    Left = 16
+    Top = 480
+    Width = 113
     Height = 17
-    Caption = 'Inflation'
+    Caption = 'Adjust for Inflation?'
     TabOrder = 20
   end
   object StatusBar1: TStatusBar
     Left = 0
     Top = 610
-    Width = 674
+    Width = 789
     Height = 19
     Panels = <
       item
@@ -269,7 +271,7 @@ object Form1: TForm1
   end
   object ButtonOpenTable: TButton
     Left = 16
-    Top = 560
+    Top = 568
     Width = 81
     Height = 25
     Caption = 'Open Table'
@@ -278,12 +280,20 @@ object Form1: TForm1
   end
   object ButtonConvertTable: TButton
     Left = 136
-    Top = 480
+    Top = 472
     Width = 75
     Height = 25
     Caption = 'Show Table'
     TabOrder = 23
     OnClick = ButtonConvertTableClick
+  end
+  object ProgressBar: TProgressBar
+    Left = 224
+    Top = 576
+    Width = 553
+    Height = 17
+    Max = 1000
+    TabOrder = 24
   end
   object OpenDialog1: TOpenDialog
     Filter = 'table|*.biff'
