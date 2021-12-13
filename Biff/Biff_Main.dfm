@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 227
-  Top = 175
+  Left = 109
+  Top = 144
   BorderStyle = bsSingle
   Caption = 'Biff'
   ClientHeight = 629
@@ -46,7 +46,7 @@ object Form1: TForm1
   end
   object Label5: TLabel
     Left = 16
-    Top = 264
+    Top = 304
     Width = 42
     Height = 13
     Caption = 'UPRO %'
@@ -60,14 +60,14 @@ object Form1: TForm1
   end
   object Label7: TLabel
     Left = 16
-    Top = 424
+    Top = 456
     Width = 51
     Height = 13
     Caption = 'Total Days'
   end
   object Label8: TLabel
-    Left = 80
-    Top = 424
+    Left = 72
+    Top = 456
     Width = 49
     Height = 13
     Caption = 'Step Days'
@@ -113,8 +113,8 @@ object Form1: TForm1
     Text = '20000'
   end
   object ButtonTest: TButton
-    Left = 16
-    Top = 520
+    Left = 232
+    Top = 528
     Width = 185
     Height = 25
     Caption = '100% VOO or 100% UPRO'
@@ -124,8 +124,8 @@ object Form1: TForm1
   end
   object ButtonClearMemo: TButton
     Left = 112
-    Top = 560
-    Width = 97
+    Top = 568
+    Width = 89
     Height = 25
     Caption = 'Clear Memo'
     TabOrder = 6
@@ -133,15 +133,15 @@ object Form1: TForm1
   end
   object EditUPROPer: TEdit
     Left = 64
-    Top = 264
+    Top = 304
     Width = 49
     Height = 21
     TabOrder = 7
     Text = '100'
   end
   object ButtonUPRO: TButton
-    Left = 128
-    Top = 264
+    Left = 120
+    Top = 304
     Width = 83
     Height = 25
     Caption = 'Calculate EV'
@@ -149,8 +149,8 @@ object Form1: TForm1
     OnClick = ButtonUPROClick
   end
   object CheckBoxRebalance: TCheckBox
-    Left = 16
-    Top = 496
+    Left = 232
+    Top = 504
     Width = 153
     Height = 17
     Caption = 'Rebalance after +- %'
@@ -158,8 +158,8 @@ object Form1: TForm1
     Visible = False
   end
   object EditRePerc: TEdit
-    Left = 176
-    Top = 496
+    Left = 392
+    Top = 504
     Width = 33
     Height = 21
     TabOrder = 10
@@ -193,42 +193,42 @@ object Form1: TForm1
     Text = '50000'
   end
   object ButtonBestRatio: TButton
-    Left = 24
-    Top = 304
-    Width = 177
+    Left = 16
+    Top = 344
+    Width = 185
     Height = 25
-    Caption = 'Find Best Ratio'
+    Caption = 'Find Best Ratio ( VOO / UPRO )'
     TabOrder = 14
     OnClick = ButtonBestRatioClick
   end
   object ButtonFillRatio: TButton
-    Left = 56
-    Top = 344
-    Width = 105
+    Left = 16
+    Top = 416
+    Width = 185
     Height = 25
-    Caption = 'Fill Ratio'
+    Caption = 'Fill One Row Table'
     TabOrder = 15
     OnClick = ButtonFillRatioClick
   end
   object EditTotalDay: TEdit
     Left = 16
-    Top = 440
-    Width = 49
+    Top = 472
+    Width = 41
     Height = 21
     TabOrder = 16
     Text = '5000'
   end
   object EditStepDay: TEdit
-    Left = 80
-    Top = 440
+    Left = 72
+    Top = 472
     Width = 49
     Height = 21
     TabOrder = 17
     Text = '1000'
   end
   object ButtonFillTable: TButton
-    Left = 136
-    Top = 440
+    Left = 128
+    Top = 472
     Width = 73
     Height = 25
     Caption = 'Fill Table'
@@ -236,22 +236,22 @@ object Form1: TForm1
     OnClick = ButtonFillTableClick
   end
   object CheckBoxAdv: TCheckBox
-    Left = 64
-    Top = 232
+    Left = 240
+    Top = 464
     Width = 73
     Height = 17
     Caption = 'Advanced'
-    Checked = True
-    State = cbChecked
     TabOrder = 19
+    Visible = False
   end
   object CheckBoxInflation: TCheckBox
-    Left = 64
-    Top = 472
-    Width = 73
+    Left = 16
+    Top = 568
+    Width = 81
     Height = 17
     Caption = 'Inflation'
     TabOrder = 20
+    OnClick = CheckBoxInflationClick
   end
   object StatusBar1: TStatusBar
     Left = 0
@@ -269,21 +269,37 @@ object Form1: TForm1
   end
   object ButtonOpenTable: TButton
     Left = 16
-    Top = 560
-    Width = 81
+    Top = 520
+    Width = 89
     Height = 25
     Caption = 'Open Table'
     TabOrder = 22
     OnClick = ButtonOpenTableClick
   end
   object ButtonConvertTable: TButton
-    Left = 136
-    Top = 480
-    Width = 75
+    Left = 112
+    Top = 520
+    Width = 89
     Height = 25
     Caption = 'Show Table'
     TabOrder = 23
     OnClick = ButtonConvertTableClick
+  end
+  object RadioGroupBiff: TRadioGroup
+    Left = 16
+    Top = 232
+    Width = 185
+    Height = 49
+    Caption = 'Biff'
+    Columns = 4
+    ItemIndex = 0
+    Items.Strings = (
+      '1.0'
+      '1.5'
+      '2.0'
+      '3.0')
+    TabOrder = 24
+    OnClick = RadioGroupBiffClick
   end
   object OpenDialog1: TOpenDialog
     Filter = 'table|*.biff'

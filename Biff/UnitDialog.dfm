@@ -31,14 +31,14 @@ object FormDialog: TFormDialog
   end
   object Label7: TLabel
     Left = 40
-    Top = 256
+    Top = 288
     Width = 51
     Height = 13
     Caption = 'Total Days'
   end
   object Label8: TLabel
     Left = 104
-    Top = 256
+    Top = 288
     Width = 49
     Height = 13
     Caption = 'Step Days'
@@ -97,14 +97,15 @@ object FormDialog: TFormDialog
     Text = '50000'
   end
   object CheckBoxAdv: TCheckBox
-    Left = 56
-    Top = 224
+    Left = 120
+    Top = 336
     Width = 73
     Height = 17
     Caption = 'Advanced'
     Checked = True
     State = cbChecked
     TabOrder = 6
+    Visible = False
   end
   object Panel1: TPanel
     Left = 8
@@ -136,7 +137,7 @@ object FormDialog: TFormDialog
   end
   object EditTotalDay: TEdit
     Left = 40
-    Top = 272
+    Top = 304
     Width = 49
     Height = 21
     TabOrder = 8
@@ -144,7 +145,7 @@ object FormDialog: TFormDialog
   end
   object EditStepDay: TEdit
     Left = 104
-    Top = 272
+    Top = 304
     Width = 49
     Height = 21
     TabOrder = 9
@@ -152,10 +153,25 @@ object FormDialog: TFormDialog
   end
   object CheckBoxInflation: TCheckBox
     Left = 56
-    Top = 304
+    Top = 336
     Width = 65
     Height = 17
     Caption = 'Inflation'
     TabOrder = 10
+  end
+  object RadioGroupBiff: TRadioGroup
+    Left = 16
+    Top = 224
+    Width = 185
+    Height = 49
+    Caption = 'Biff'
+    Columns = 4
+    ItemIndex = 0
+    Items.Strings = (
+      '1.0'
+      '1.5'
+      '2.0'
+      '3.0')
+    TabOrder = 11
   end
 end

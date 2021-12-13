@@ -26,6 +26,7 @@ type
     EditTotalDay: TEdit;
     EditStepDay: TEdit;
     CheckBoxInflation: TCheckBox;
+    RadioGroupBiff: TRadioGroup;
   private
     { Private declarations }
   public
@@ -53,6 +54,7 @@ begin
   EditStepDay.Text:= Form1.EditStepDay.Text;
   CheckBoxAdv.Checked:= Form1.CheckBoxAdv.Checked;
   CheckBoxInflation.Checked:= Form1.CheckBoxInflation.Checked;
+  RadioGroupBiff.ItemIndex:= Form1.RadioGroupBiff.ItemIndex;
 end;
 
 procedure TFormDialog.CopyParameterToMain;
@@ -64,6 +66,7 @@ begin
   Form1.EditStepDay.Text:= EditStepDay.Text;
   Form1.CheckBoxAdv.Checked:= CheckBoxAdv.Checked;
   Form1.CheckBoxInflation.Checked:= CheckBoxInflation.Checked;
+  Form1.RadioGroupBiff.ItemIndex:= RadioGroupBiff.ItemIndex;
 end;
 
 
