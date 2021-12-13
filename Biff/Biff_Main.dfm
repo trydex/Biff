@@ -307,6 +307,7 @@ object Form1: TForm1
     Top = 576
     Width = 441
     Height = 17
+    Max = 1000
     TabOrder = 25
   end
   object OpenDialog1: TOpenDialog
