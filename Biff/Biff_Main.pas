@@ -4,7 +4,10 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Math, INIFiles, ComCtrls, ExtCtrls, UnitDialog;
+  Dialogs, StdCtrls, Math, INIFiles, ComCtrls, ExtCtrls, UnitDialog, Utils;
+
+const
+  WM_UPDATE_PB = WM_USER;
 
 type
   TPriceData = record
@@ -36,6 +39,20 @@ type
 
   TTable = array of TRatioDayArray;
   
+  TBestRatioThread = class(TThread)
+  public
+    constructor Create(value: bool);
+    procedure Execute; override;
+    procedure DoTerminate; override;
+  end;
+
+  TFillTableThread = class(TThread)
+  public
+    constructor Create(value: bool);
+    procedure Execute; override;
+    procedure DoTerminate; override;
+  end;
+    
 type
   TForm1 = class(TForm)
     Memo1: TMemo;
@@ -73,6 +90,7 @@ type
     Timer1: TTimer;
     ButtonConvertTable: TButton;
     RadioGroupBiff: TRadioGroup;
+    ProgressBar: TProgressBar;
     procedure ButtonTestClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ButtonClearMemoClick(Sender: TObject);
@@ -88,9 +106,16 @@ type
     procedure ButtonConvertTableClick(Sender: TObject);
     procedure CheckBoxInflationClick(Sender: TObject);
     procedure RadioGroupBiffClick(Sender: TObject);
+    procedure EnableControls(enable: bool);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
 
   private
     { Private declarations }
+    Utils: TUtils;
+    BestRatioThread: TBestRatioThread;
+    FillTableThread: TFillTableThread;
+    IsClosing: bool;
+    procedure WMUpdatePB(var msg: TMessage); message WM_UPDATE_PB;
   public
     { Public declarations }
 
@@ -123,12 +148,14 @@ type
     procedure CalculateEVAdv;
     procedure CalculateTest;
     procedure Statistic;
+    procedure FindBestRatioProcedure;
     function FindBestRatio(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
     function FindBestRatioAdv(ACapital, ARasxod, APercent: real; ANumDay, ANumSim, AStepDay: integer): integer;  // Result 0..100 Perc for UPRO
 
     function FillRatioForDays(ANumDay, AStepDay: integer; APercent:real): TRatioDayArray;
     procedure FillAllRatio(var ARatioDayArray: TRatioDayArray);
     function FindTableRatio(ACapital: real; DayLeft: integer; ATable: TTable): integer;
+    procedure FillAllTableProcedure();
     procedure FillAllTable(ANumDay, AStepDay: integer);
     procedure SaveTable;
     procedure LoadTable;
@@ -141,6 +168,7 @@ type
     function CorrectPerc(ACapital, APercent: real; ARatio, ANumDay, ACurDay, AStepDay: integer;
                              var ATable: TTable): real;  // New correct percent
 
+
   //  procedure GetTableName;
 
   end;
@@ -152,9 +180,56 @@ implementation
 
 {$R *.dfm}
 
+//================================================
+constructor TBestRatioThread.Create(value: bool);
+begin
+  inherited create(value);
+  FreeOnTerminate := true;
+  Priority := tpNormal;
+end;
+
+procedure TBestRatioThread.Execute;
+begin
+
+  Form1.EnableControls(false);
+  Form1.FindBestRatioProcedure();
+end;
+
+procedure TBestRatioThread.DoTerminate;
+begin
+  Form1.EnableControls(true);
+  inherited
+end;
+
+
+constructor TFillTableThread.Create(value: bool);
+begin
+  inherited create(value);
+  FreeOnTerminate := true;
+  Priority := tpNormal;
+end;
+
+procedure TFillTableThread.Execute;
+begin
+  Form1.EnableControls(false);
+  Form1.FillAllTableProcedure();
+end;
+
+procedure TFillTableThread.DoTerminate;
+begin
+  Form1.EnableControls(true);
+end;
+//================================================
+
 procedure TForm1.FormCreate(Sender: TObject);
 var i: integer;
 begin
+  // Update decimal separator only for currect application.
+  Application.UpdateFormatSettings := false;
+  DecimalSeparator := '.';
+
+  IsClosing := false;
+  ProgressBar.DoubleBuffered := true;
   LoadIniFile;
   GetAllParameter;
   OpenPriceFile;
@@ -240,7 +315,8 @@ begin
          Memo1.Lines.Add(S);
          Exit;
        end;     }
-      PriceDate:= StrToDate(CurStr);
+
+      PriceDate:= Utils.StrToDateEx(CurStr);
       CurStr:= GetFirstString(S);
       VOO:= StrToFloat(CurStr);
       CurStr:= GetFirstString(S);
@@ -269,8 +345,8 @@ begin
   MYBankr:= StrToFloatDef(EditMyBankr.Text, 10) / 100;
   UPROBankr:= StrToIntDef(EditUPROBankr.Text, 50000);
   IsBankruptcy:= CheckBoxBankruptcy.Checked;
-  FUPROPerc:= StrToFloatDef(EditUPROPer.Text, 100) / 100;
-  FVOOPerc:= 1 - FUPROPerc;
+  //FUPROPerc:= StrToFloatDef(EditUPROPer.Text, 100) / 100;
+  //FVOOPerc:= 1 - FUPROPerc;
   TotalDay:= StrToIntDef(EditTotalDay.Text, 5000);
   StepDay:= StrToIntDef(EditStepDay.Text, 1000);
   Advanced:= CheckBoxAdv.Checked;
@@ -872,6 +948,12 @@ begin
 end;
 
 procedure TForm1.ButtonBestRatioClick(Sender: TObject);
+begin
+  ProgressBar.Position := 0;
+  BestRatioThread := TBestRatioThread.Create(false);
+end;
+
+procedure TForm1.FindBestRatioProcedure();
 var
   BestRatio: integer;
 begin
@@ -885,8 +967,9 @@ begin
   end else
     //BestRatio:= FindBestRatio(StartCapital, Rasxod, NumDay, NumSim);
     BestRatio:= FindBestRatio(StartCapital / Rasxod, 1, MyBankr, NumDay, NumSim);
-end;
 
+  EditUPROPer.Text:= IntToStr(BestRatio);
+end;
 
 function TForm1.FillRatioForDays(ANumDay, AStepDay: integer; APercent: real): TRatioDayArray;
 var
@@ -1110,11 +1193,20 @@ begin
       GetAllParameter;
       SaveIniFile;
       Correction:= false;
-      FillAllTable(TotalDay, StepDay);
-      SaveTable;
-      SaveIniFile;
+      FillTableThread := TFillTableThread.Create(false);
     end;
   end;
+end;
+
+procedure TForm1.FillAllTableProcedure();
+begin
+  ProgressBar.Position := 0;
+  //Memo1.Lines.BeginUpdate;
+  FillAllTable(TotalDay, StepDay);
+  //Memo1.Lines.EndUpdate;
+  ProgressBar.Position := ProgressBar.Max;
+  SaveTable;
+  SaveIniFile;
 end;
 
 procedure TForm1.FillAllTable(ANumDay, AStepDay: integer);
@@ -1127,6 +1219,7 @@ begin
     Exit;
   end;
   NumBlock:= ANumDay div AStepDay;
+  ProgressBar.Step := ProgressBar.Max div NumBlock;
   SetLength(CurTable, NumBlock);
   if NumAlgo = 3 then begin
     StartRatio:= FindBestRatio(StartCapital, Rasxod, MyBankr, NumDay, NumSim);  // Biff 1
@@ -1134,7 +1227,6 @@ begin
     Percent:= MyBankr;
     for i:= NumBlock - 1 downto 1 do begin
       StatusBar1.Panels[1].Text:= Format('Calculating table for days: %d / %d ', [(i) * AStepDay, ANumDay]);
-      Application.ProcessMessages;
       //Percent:= MyBankr;
       CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
       Percent:= CorrectPerc(StartCapital, {MyBankr}Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
@@ -1152,14 +1244,16 @@ begin
       CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
  }
       SaveTable;
+      PostMessage(Form1.Handle, WM_UPDATE_PB, 0, 0);
     end;
   end else
   for i:= 0 to NumBlock - 1 do begin
     StatusBar1.Panels[1].Text:= Format('Calculating table for days: %d / %d ', [(i+1) * AStepDay, ANumDay]);
-    Application.ProcessMessages;
     CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, MyBankr);
     SaveTable;
+    PostMessage(Form1.Handle, WM_UPDATE_PB, 0, 0);
   end;
+ StatusBar1.Panels[1].Text:='Ready';
 end;
 
 procedure TForm1.SaveTable;
@@ -1530,4 +1624,24 @@ begin
   NumAlgo:= RadioGroupBiff.ItemIndex;
 end;
 
+procedure TForm1.EnableControls(enable: bool);
+begin
+  if IsClosing then
+    Exit;
+  Form1.ButtonBestRatio.Enabled := enable;
+  Form1.ButtonFillTable.Enabled := enable;
+  Form1.ButtonUPRO.Enabled := enable;
+end;
+
+procedure TForm1.WMUpdatePB(var msg: TMessage);
+begin
+  ProgressBar.StepIt;
+end;
+
+procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  IsClosing := true;
+end;
+
 end.
+
