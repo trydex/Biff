@@ -345,8 +345,8 @@ begin
   MYBankr:= StrToFloatDef(EditMyBankr.Text, 10) / 100;
   UPROBankr:= StrToIntDef(EditUPROBankr.Text, 50000);
   IsBankruptcy:= CheckBoxBankruptcy.Checked;
-  //FUPROPerc:= StrToFloatDef(EditUPROPer.Text, 100) / 100;
-  //FVOOPerc:= 1 - FUPROPerc;
+  FUPROPerc:= StrToFloatDef(EditUPROPer.Text, 0) / 100;
+  FVOOPerc:= 1 - FUPROPerc;
   TotalDay:= StrToIntDef(EditTotalDay.Text, 5000);
   StepDay:= StrToIntDef(EditStepDay.Text, 1000);
   Advanced:= CheckBoxAdv.Checked;
@@ -1222,7 +1222,10 @@ begin
   ProgressBar.Step := ProgressBar.Max div NumBlock;
   SetLength(CurTable, NumBlock);
   if NumAlgo = 3 then begin
-    StartRatio:= FindBestRatio(StartCapital, Rasxod, MyBankr, NumDay, NumSim);  // Biff 1
+    if not IsZero(FUPROPerc) then
+      StartRatio:= Round(FUPROPerc * 100)
+    else
+      StartRatio:= FindBestRatio(StartCapital, Rasxod, MyBankr, NumDay, NumSim);  // Biff 1
     Memo1.Lines.Add(Format('Biff 1 Start Ratio:: %d ', [StartRatio]));
     Percent:= MyBankr;
     DiffPercent:= 0;
@@ -1240,7 +1243,7 @@ begin
         repeat
           NewPercent:= CorrectPerc(StartCapital, {MyBankr}Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
           if NewPercent < 0 then begin
-            Percent:= Percent - 0.1;
+            Percent:= Percent - 0.05;
             if Percent < 0 then
               Percent:= (Percent + 0.1) / 2;  //0.01;
           end;
