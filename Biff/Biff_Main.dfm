@@ -1,8 +1,8 @@
 object Form1: TForm1
-  Left = 286
-  Top = 139
+  Left = 86
+  Top = 157
   BorderStyle = bsSingle
-  Caption = 'Biff v.1.12'
+  Caption = 'Biff v.1.13'
   ClientHeight = 629
   ClientWidth = 674
   Color = clBtnFace
@@ -12,7 +12,7 @@ object Form1: TForm1
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   OldCreateOrder = False
-  Position = poScreenCenter
+  Position = poDefault
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PixelsPerInch = 96

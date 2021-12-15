@@ -1211,8 +1211,8 @@ end;
 
 procedure TForm1.FillAllTable(ANumDay, AStepDay: integer);
 var
-  i, NumBlock, StartRatio: integer;
-  Percent: real;
+  i, k, NumBlock, StartRatio: integer;
+  Percent, NewPercent, StartPercent, DiffPercent: real;
 begin
   if NumAlgo = 0 then begin
     Memo1.Lines.Add(Format('Not need create table foe Biff 1.0 ', []));
@@ -1225,19 +1225,38 @@ begin
     StartRatio:= FindBestRatio(StartCapital, Rasxod, MyBankr, NumDay, NumSim);  // Biff 1
     Memo1.Lines.Add(Format('Biff 1 Start Ratio:: %d ', [StartRatio]));
     Percent:= MyBankr;
+    DiffPercent:= 0;
     for i:= NumBlock - 1 downto 1 do begin
       StatusBar1.Panels[1].Text:= Format('Calculating table for days: %d / %d ', [(i) * AStepDay, ANumDay]);
       //Percent:= MyBankr;
+      StartPercent:= Percent;
+      //Percent:= Percent - DiffPercent;
+      if DiffPercent >= Percent then
+        Percent:= Percent / 2
+      else
+        Percent:= Percent - DiffPercent;
       CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
-      Percent:= CorrectPerc(StartCapital, {MyBankr}Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
+      for k:= 1 to 2 do begin
+        repeat
+          NewPercent:= CorrectPerc(StartCapital, {MyBankr}Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
+          if NewPercent < 0 then begin
+            Percent:= Percent - 0.1;
+            if Percent < 0 then
+              Percent:= (Percent + 0.1) / 2;  //0.01;
+          end;
+        until NewPercent > 0;
+        Percent:= NewPercent;
+        CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
+      end;
+   {
+      Percent:= CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
       if Percent > 0 then
         CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
+    }
+      DiffPercent:= StartPercent - Percent;
+     { Percent:=} CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
 
-      Percent:= CorrectPerc(StartCapital, {MyBankr}Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
-      if Percent > 0 then
-        CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
-      Percent:= CorrectPerc(StartCapital, {MyBankr}Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
-{      CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
+     {      CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
       Percent:= CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
       CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
       Percent:= CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
