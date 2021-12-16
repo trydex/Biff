@@ -34,6 +34,7 @@ type
     FDay: integer;
     FMyBankr: real;         // maybe not
     FUPROBankr: integer;    // maybe not
+    FPercent: real;
     RatioForDay: array [0..100] of TRatioForDay;
   end;
 
@@ -166,7 +167,7 @@ type
     function TableIsCorrect: boolean;
     procedure ConvertTableToTxt;
     function CorrectPerc(ACapital, APercent: real; ARatio, ANumDay, ACurDay, AStepDay: integer;
-                             var ATable: TTable): real;  // New correct percent
+                             var ATable: TTable; var AFinalRisk: real): real;  // New correct percent
 
 
   //  procedure GetTableName;
@@ -1017,18 +1018,18 @@ begin
     else
       BestRatio:= FindBestRatio(CurStartCapital, {Rasxod} 1, APercent, ANumDay, NumSim);
 
-  {  if LastRatio >=0 then begin
+    if LastRatio >=0 then begin
       DiffRatio:= BestRatio - LastRatio;
       if DiffRatio > 10 then begin
         StepM:= Sqrt(StepM);
       end
-  //    else if DiffRatio <= 1 then
-  //      StepM:= StepM * 1.5
-  //    else if DiffRatio <= 2 then
-  //      StepM:= StepM * 1.2
+    //  else if DiffRatio <= 1 then
+    //    StepM:= StepM * 1.5
+      else if DiffRatio <= 2 then
+        StepM:= StepM * 1.2
       else  if (DiffRatio <= 5) and (DiffRatio > 0) then
         StepM:= StepM * 1.1;
-    end; }
+    end;
 
     LastRatio:= BestRatio;
     StartM:= StartM * StepM;
@@ -1211,8 +1212,10 @@ end;
 
 procedure TForm1.FillAllTable(ANumDay, AStepDay: integer);
 var
-  i, k, NumBlock, StartRatio: integer;
-  Percent, NewPercent, StartPercent, DiffPercent: real;
+  i, k, m, NumBlock, StartRatio: integer;
+  Percent, NewPercent, StartPercent, DiffPercent, FinalRisk: real;
+label
+  ExitUntil;
 begin
   if NumAlgo = 0 then begin
     Memo1.Lines.Add(Format('Not need create table foe Biff 1.0 ', []));
@@ -1231,40 +1234,39 @@ begin
     DiffPercent:= 0;
     for i:= NumBlock - 1 downto 1 do begin
       StatusBar1.Panels[1].Text:= Format('Calculating table for days: %d / %d ', [(i) * AStepDay, ANumDay]);
-      //Percent:= MyBankr;
       StartPercent:= Percent;
-      //Percent:= Percent - DiffPercent;
       if DiffPercent >= Percent then
         Percent:= Percent / 2
       else
         Percent:= Percent - DiffPercent;
       CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
-      for k:= 1 to 2 do begin
+      //for k:= 1 to 2 do begin
+      k:= 0;
+      m:= 0;
+      repeat
+        Inc(k);
         repeat
-          NewPercent:= CorrectPerc(StartCapital, {MyBankr}Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
+          Memo1.Lines.Add(Format('Correction %d - %d', [k, m]));
+          NewPercent:= CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay,
+                       CurTable, FinalRisk);  // New correct percent
+          if Abs(FinalRisk - MyBankr) < MyBankr * 0.01 then begin
+            Memo1.Lines.Add(Format('End Correction, Final Risk =  %f', [FinalRisk * 100]));
+            Goto ExitUntil;
+          end;
           if NewPercent < 0 then begin
-            Percent:= Percent - 0.05;
-            if Percent < 0 then
-              Percent:= (Percent + 0.1) / 2;  //0.01;
+            Percent:= Percent * 0.95;
+            Inc(m);
           end;
         until NewPercent > 0;
         Percent:= NewPercent;
         CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
-      end;
-   {
-      Percent:= CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
-      if Percent > 0 then
-        CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
-    }
+      //end;
+      until k > 9;
+      Memo1.Lines.Add(Format('End Correction on 5 iterration, Final Risk =  %f', [FinalRisk * 100]));
+      ExitUntil:
       DiffPercent:= StartPercent - Percent;
-     { Percent:=} CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
+      //CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable, FinalRisk);  // New correct percent
 
-     {      CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
-      Percent:= CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
-      CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
-      Percent:= CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable);  // New correct percent
-      CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
- }
       SaveTable;
       PostMessage(Form1.Handle, WM_UPDATE_PB, 0, 0);
     end;
@@ -1549,7 +1551,7 @@ begin
 end;
 
 function TForm1.CorrectPerc(ACapital, APercent: real; ARatio, ANumDay, ACurDay, AStepDay: integer;
-                             var ATable: TTable): real;  // New correct percent
+                             var ATable: TTable; var AFinalRisk: real): real;  // New correct percent
 var
   N: integer; //InnerNumSim, CurRatio, First, Last: integer;
   StartRatioArray: TRatioArray;
@@ -1626,7 +1628,8 @@ begin
     end else begin
       X:= (FRatio - (1 - DeltaR) * APercent) / DeltaR;
       Y:= (MyBankr{APercent} - DeltaR * X) / (1 - DeltaR);
-    end;  
+    end;
+    AFinalRisk:= FRatio;
     Memo1.Lines.Add(Format('R0 = %f, R100 = %f, FinalRisk = %f ',
                            [R0Perc * 100, R100Perc * 100, FRatio * 100]));
     Memo1.Lines.Add(Format('Start Percent = %f, X = %f, Y = %f ', [APercent *100, X *100, Y * 100]));
