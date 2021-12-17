@@ -1025,9 +1025,9 @@ begin
       end
     //  else if DiffRatio <= 1 then
     //    StepM:= StepM * 1.5
-      else if DiffRatio <= 2 then
-        StepM:= StepM * 1.2
-      else  if (DiffRatio <= 5) and (DiffRatio > 0) then
+    //  else if DiffRatio <= 2 then
+    //    StepM:= StepM * 1.2
+      else  if (DiffRatio <= 2) and (DiffRatio >= 0) then
         StepM:= StepM * 1.1;
     end;
 
@@ -1067,6 +1067,7 @@ begin
   end;                  // not Calculated yet for Ratio = 0
  end;                   // with result
  FillAllRatio(Result);
+ Result.FPercent:= APercent;
  for i:= 0 to 100 do begin
    Memo1.Lines.Add(Format('%d: %f ', [i, Result.RatioForDay[i].FCapital]));
  end;
@@ -1203,6 +1204,7 @@ procedure TForm1.FillAllTableProcedure();
 begin
   ProgressBar.Position := 0;
   //Memo1.Lines.BeginUpdate;
+  CurTableFileName:= SetTableName;
   FillAllTable(TotalDay, StepDay);
   //Memo1.Lines.EndUpdate;
   ProgressBar.Position := ProgressBar.Max;
@@ -1213,7 +1215,7 @@ end;
 procedure TForm1.FillAllTable(ANumDay, AStepDay: integer);
 var
   i, k, m, NumBlock, StartRatio: integer;
-  Percent, NewPercent, StartPercent, DiffPercent, FinalRisk: real;
+  Percent, NewPercent, StartPercent, DiffPercent, FinalRisk, StepPercent: real;
 label
   ExitUntil;
 begin
@@ -1273,7 +1275,8 @@ begin
   end else
   for i:= 0 to NumBlock - 1 do begin
     StatusBar1.Panels[1].Text:= Format('Calculating table for days: %d / %d ', [(i+1) * AStepDay, ANumDay]);
-    CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, MyBankr);
+    StepPercent:= MyBankr / NumBlock;
+    CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay,{MyBankr}(i+1) * StepPercent);
     SaveTable;
     PostMessage(Form1.Handle, WM_UPDATE_PB, 0, 0);
   end;
@@ -1286,8 +1289,8 @@ var
   FileStr: string;
   F: file of TRatioDayArray;
 begin
-  FileStr:= SetTableName;
-  CurTableFileName:= FileStr;
+  FileStr:= CurTableFileName; //SetTableName;
+  //CurTableFileName:= FileStr;
   AssignFile(F, FileStr);
   Rewrite(F);
   for i:= 0 to High(CurTable) do begin
@@ -1522,10 +1525,18 @@ begin
     CurStr:= 'Days:' + #9;
     for k:= 0 to High(CurTable) do begin
       with CurTable[k] do begin
-        CurStr:= CurStr + Format('%d' + #9, [FDay]);
+        CurStr:= CurStr + Format('%7d' + #9, [FDay]);
       end;
     end;
     Memo1.Lines.Add(CurStr);
+    CurStr:= 'Percent:' + #9;
+    for k:= 0 to High(CurTable) do begin
+      with CurTable[k] do begin
+        CurStr:= CurStr + Format('%7.3f' + #9, [FPercent]);
+      end;
+    end;
+    Memo1.Lines.Add(CurStr);
+
   for i:= 0 to 100 do begin
     CurStr:= IntToStr(i) + '.' + #9;
     for k:= 0 to High(CurTable) do begin
