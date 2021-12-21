@@ -2,7 +2,7 @@ unit Utils;
 
 interface
 
-uses Classes, Sysutils;
+uses Windows, Messages, SysUtils, Variants, Classes;
 
 type
   TUtils = class(TObject)
@@ -12,6 +12,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function StrToDateEx(value: string): TDateTime;
+    function GetCpuCount(): Cardinal;
   end;
 
 implementation
@@ -39,6 +40,13 @@ begin
   fmt.LongTimeFormat :='hh:nn:ss';
   fmt.TimeSeparator  :=':';
   result := StrToDate(value, fmt);
+end;
+
+function TUtils.GetCpuCount: Cardinal;
+var Info: TSystemInfo;
+begin
+  GetSystemInfo(Info);
+  Result := Info.dwNumberOfProcessors;
 end;
 
 end.
