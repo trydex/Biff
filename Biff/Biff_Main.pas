@@ -110,6 +110,7 @@ type
     procedure RadioGroupBiffClick(Sender: TObject);
     procedure EnableControls(enable: bool);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 
   private
     { Private declarations }
@@ -140,12 +141,14 @@ type
     CurTable: TTable;  //array of TRatioDayArray;
     CurTableFileName: string;
     StartTimeTimer: TDateTime;
+    LogFileName: string;
 
     procedure OpenPriceFile;
     procedure GetAllParameter;
     procedure LoadIniFile;
     procedure SaveIniFile;
-
+    procedure SetLogFileName;
+    procedure SaveLog;
     procedure CalculateEV;
     procedure CalculateEVAdv;
     procedure CalculateTest;
@@ -171,7 +174,7 @@ type
     procedure ConvertTableToTxt;
     function CorrectPerc(ACapital, APercent: real; ARatio, ANumDay, ACurDay, AStepDay: integer;
                              var ATable: TTable; var AFinalRisk: real): real;  // New correct percent
-
+    procedure CreateTablePercent(var ATable: TTable; TargetPercent, Koef: real; ANumDay, AStepDay: integer);
 
   //  procedure GetTableName;
 
@@ -248,8 +251,19 @@ begin
       FRatio:= 0;
     end;
   end;
-//  StatusBar1.Update;
+ SetLogFileName;
 end;
+
+procedure TForm1.SetLogFileName;
+begin
+  LogFileName:= Caption + '_'+  FormatDateTime('yyyy-mm-dd-hh-nn-ss', Now) + '.txt';
+end;
+
+procedure TForm1.SaveLog;
+begin
+  Memo1.Lines.SaveToFile(LogFileName);
+end;
+
 
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
@@ -277,6 +291,7 @@ begin
     if TableIsCorrect then
       CalculateEVAdv;
   end;
+  SaveLog;
 end;
 
 procedure TForm1.ButtonClearMemoClick(Sender: TObject);
@@ -351,8 +366,6 @@ procedure TForm1.LoadIniFile;
 var
   AIniFile: INIFiles.TIniFile;
   AFileName: string;
-  ScanPeriod: integer;
-  MouseDelay: real;
 begin
   AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
   AIniFile:= IniFiles.TIniFile.Create(AFileName);
@@ -679,7 +692,7 @@ begin
         end;
       end;
     end;
-    Total:= Total + InnerNumSim;
+    Total:= Total + AInnerNumSim;
     FRatio:= Bankruptcy / Total;
   end;
 end;
@@ -687,7 +700,7 @@ end;
 begin
 //  StartTimer('Finding simple Best Ratio ...');
   Memo1.Lines.Add('');
-  Memo1.Lines.Add(Format('Biff: %d, Capital: %.0f, Rasxod: %.0f, Percent: %f, Days: %d, Sim: %d ',
+  Memo1.Lines.Add(Format('Biff: %d, Capital: %.0f, Rasxod: %.0f, Percent: %.4f, Days: %d, Sim: %d ',
                          [NumAlgo, ACapital, ARasxod, APercent*100, ANumDay, ANumSim]));
   StartRatioArray:= ZeroRatioArray;
   N:= Length(PriceData);
@@ -802,7 +815,7 @@ begin
         end;
       end;
     end;
-    Total:= Total + InnerNumSim;
+    Total:= Total + AInnerNumSim;
     FRatio:= Bankruptcy / Total;
   end;
 end;
@@ -848,7 +861,7 @@ begin
     ZeroCapital://
   end;
   // Total_EV:= Total_EV + TotalCapital;     if need EV
-  Total:= Total + InnerNumSim;
+  Total:= Total + AInnerNumSim;
   FRatio:= Bankruptcy / Total;
  // Memo1.Lines.Add(Format('Ratio: %d , %f ', [ACurRatio, FRatio * 100]));
  end;
@@ -857,7 +870,7 @@ end;
 begin
 //  StartTimer('Finding Best Ratio Advantage...');
   Memo1.Lines.Add('');
-  Memo1.Lines.Add(Format('Capital: %.0f, Rasxod: %.0f, Percent: %f, Days: %d, Sim: %d ',
+  Memo1.Lines.Add(Format('Capital: %.0f, Rasxod: %.0f, Percent: %.4f, Days: %d, Sim: %d ',
                          [ACapital, ARasxod, APercent*100, ANumDay, ANumSim]));
 
   NumBankr:= 0;
@@ -1069,6 +1082,7 @@ begin
    // FindTablePercent(StartCapital, Rasxod, MyBankr, BestRatio, NumDay, NumSim, StepDay, TempTable);
   end;
   //Timer1.Enabled:= false;
+  SaveLog;
   EditUPROPer.Text:= FloatToStr(BestRatio * 100 / MaxI);
 end;
 
@@ -1383,19 +1397,22 @@ begin
       //CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable, FinalRisk);  // New correct percent
 
       SaveTable;
+      SaveLog;
       PostMessage(Form1.Handle, WM_UPDATE_PB, 0, 0);
     end;
   end else begin
    StartTimer(true, 'Creating Table by Biff 2.0...');
    Memo1.Lines.Add(Format('Biff 1 Start Ratio:: %f ', [StartRatio * 100 / MaxI]));
  //  FindTablePercent(StartCapital, Rasxod, MyBankr, StartRatio, NumDay, NumSim, StepDay, CurTable);
+ //  CreateTablePercent(CurTable, MyBankr, 1.5, NumDay, StepDay);
    StepPercent:= MyBankr / NumBlock;
    for i:= 0 to NumBlock - 1 do begin
     StatusBar1.Panels[1].Text:= Format('Calculating table for days: %d / %d ', [(i+1) * AStepDay, ANumDay]);
     CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, (i+1) * StepPercent);
-//    CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay,CurTable[i].FPercent);
+   // CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay,CurTable[i].FPercent);
 
     SaveTable;
+    SaveLog;
     PostMessage(Form1.Handle, WM_UPDATE_PB, 0, 0);
    end;
   end;
@@ -1798,6 +1815,28 @@ end;
 procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   IsClosing := true;
+end;
+
+procedure TForm1.CreateTablePercent(var ATable: TTable; TargetPercent, Koef: real; ANumDay, AStepDay: integer);
+var
+  i, NumBlock: integer;
+begin
+  NumBlock:= ANumDay div AStepDay;
+  if Length(ATable) < NumBlock then
+    SetLength(ATable, NumBlock);
+  ATable[NumBlock - 1].FPercent:= TargetPercent;
+  for i:= NumBlock - 2 downto 0 do begin
+    ATable[i].FPercent:= ATable[i+1].FPercent / Koef;
+  end;
+  for i:= NumBlock - 1 downto 0 do begin
+    Memo1.Lines.Add(Format('Days: ' +#9+ '%d ,' +#9+ '%.4f ', [(i+1) * AStepDay, ATable[i].FPercent *100]));
+  end;
+
+end;
+
+procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+  CanClose:= MessageDlg('Do you really want to close?', mtCustom, [mbYes, mbNo], 0) = mrYes; 
 end;
 
 end.
