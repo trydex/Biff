@@ -290,7 +290,6 @@ begin
 
   LoadIniFile;
   GetAllParameter;
-  OpenPriceFile;
   LoadTable;
   for i:= 0 to MaxI do begin
     with ZeroRatioArray[i] do begin
@@ -1554,7 +1553,7 @@ begin
         Read(F, CurTable[i]);
       end;
       CloseFile(F);
-      StatusBar1.Panels[1].Text:= 'Table downloaded: ';// + FileStr;
+      StatusBar1.Panels[1].Text:= 'Table downloaded: ' + FileStr;
     end;
   end;
 end;
