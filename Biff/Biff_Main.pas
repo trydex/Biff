@@ -175,7 +175,6 @@ type
     function FindBestRatioAdv(ACapital, ARasxod, APercent: real; ANumDay, ANumSim, AStepDay: integer): integer;  // Result 0..100 Perc for UPRO
     procedure CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure CalcNumBankruptcySimpleInternal(ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
-    //function FindTablePercent(ACapital, ARasxod, APercent: real; ANumDay, ANumSim, AStepDay: integer; ATable: TTable): integer;  // Result 0..100 Perc for UPRO
     function FindTablePercent(ACapital, ARasxod, APercent: real; ARatio, ANumDay, ANumSim, AStepDay: integer; var ATable: TTable): integer;  // Result 0..100 Perc for UPRO
 
     function FillRatioForDays(ANumDay, AStepDay: integer; APercent:real): TRatioDayArray;
@@ -195,9 +194,7 @@ type
                              var ATable: TTable; var AFinalRisk: real): real;  // New correct percent
     procedure CreateTablePercent(var ATable: TTable; TargetPercent, Koef: real; ANumDay, AStepDay: integer);
 
-  //  procedure GetTableName;
-
-  end;
+ end;
 
 var
   Form1: TForm1;
@@ -327,12 +324,6 @@ end;
 procedure TForm1.ButtonUPROClick(Sender: TObject);
 begin
   GetAllParameter;
-{  if Advanced then begin
-    LoadTable;
-    if TableIsCorrect then
-      CalculateEVAdv;
-  end else
-    CalculateEV;  }
   if NumAlgo = 0 then
     CalculateEV
   else begin        // all other use Table
@@ -1307,36 +1298,43 @@ var
 begin
  try
   with ARatioDayArray do begin
-    {if RatioForDay[100].FCapital > 0 then
-      K1:= 100
-    else
-      K1:= 99;    }
-    K1:= FindNotZero(MaxI + 1);
+    RatioForDay[MaxI].FCapital:= 0;
+    RatioForDay[0].FCapital:= 0;
+    K1:= FindNotZero(MaxI);
     if K1 = 0 then begin
       for i:= 0 to MaxI do begin
         RatioForDay[i].FCapital:= StartCapital * 1000; // RatioForDay[K1].FCapital * 10;
       end;
       Exit;
     end;
-    for i:= K1 + 1 to MaxI do begin
-      RatioForDay[i].FCapital:= StartCapital * 1000; // RatioForDay[K1].FCapital * 10;
-    end;
+//    for i:= K1 + 1 to MaxI do begin
+//      RatioForDay[i].FCapital:= StartCapital * 1000; // RatioForDay[K1].FCapital * 10;
+//    end;
     repeat
       K2:= FindNotZero(K1);
       if RatioForDay[K1].FCapital < RatioForDay[K2].FCapital then begin
         RatioForDay[K2].FCapital:= 0;
         Memo1.Lines.Add('Deleting wrong Capital.') ;
-        //ShowMessage('Deleting wrong Capital.');
         Continue;
       end;
       if K1 - K2 > 1 then begin
-        Step:= Power(RatioForDay[K1].FCapital / RatioForDay[K2].FCapital, 1 / (K1 - K2));
-        for i:= K1 - 1 downto K2 + 1 do begin
+        if K2 = 0 then begin   // K2 = 0
+          Step:= RatioForDay[K1 + 1].FCapital / RatioForDay[K1].FCapital;
+        end else begin
+          Step:= Power(RatioForDay[K1].FCapital / RatioForDay[K2].FCapital, 1 / (K1 - K2));
+        end;
+        for i:= K1 - 1 downto K2  do begin
           RatioForDay[i].FCapital:= RatioForDay[i + 1].FCapital / Step;
         end;
       end;
       K1:= K2;
     until K2 = 0;
+    K1:= FindNotZero(MaxI);
+    Step:= RatioForDay[K1 ].FCapital / RatioForDay[K1 - 1].FCapital;
+    for i:= K1 + 1 to MaxI do begin
+      RatioForDay[i].FCapital:= RatioForDay[i - 1].FCapital * Step;
+    end;
+
   end;
  except
    Memo1.Lines.Add('Error in FillAllRatio...')
