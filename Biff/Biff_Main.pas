@@ -287,6 +287,7 @@ begin
 
   LoadIniFile;
   GetAllParameter;
+  OpenPriceFile;
   LoadTable;
   for i:= 0 to MaxI do begin
     with ZeroRatioArray[i] do begin
@@ -1041,9 +1042,6 @@ begin
 
 end;
 
-//function FindTablePercent(ACapital, ARasxod, APercent: real; ANumDay, ANumSim, AStepDay: integer): integer;  // Result 0..100 Perc for UPRO
-//StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay,
-//                       CurTable, FinalRisk);  // New correct percent
 
 function TForm1.FindTablePercent(ACapital, ARasxod, APercent: real; ARatio, ANumDay, ANumSim, AStepDay: integer; var ATable: TTable): integer;  // Result 0..100 Perc for UPRO
 var
@@ -1205,7 +1203,7 @@ begin
 //  Rasxod:= 1;
   StartM:= 2;
   StepM:= 1.1;
-  //LastRatio:= -1;
+  LastRatio:= -1;
  with Result do begin
   FDay:= ANumDay;
   FMyBankr:= MyBankr;
@@ -1237,7 +1235,7 @@ begin
         StepM:= StepM * 1.1;
     end;
 
-    //LastRatio:= BestRatio;
+    LastRatio:= BestRatio;
     StartM:= StartM * StepM;
     RatioForDay[BestRatio].FCapital:= CurStartCapital;
     RatioForDay[BestRatio].FNumSim:= RatioForDay[BestRatio].FNumSim + CurSim;
@@ -1248,7 +1246,7 @@ begin
   if RatioForDay[0].FNumSim = 0 then begin   // not Calculated yet for Ratio = 0
     StepM:= 1.1;
     StartM:= 2 / StepM;
-    //LastRatio:= -1;
+    LastRatio:= -1;
     repeat
       CurStartCapital:= ANumDay * StartM;
       if {Advanced} NumAlgo = 2 then
@@ -1748,6 +1746,11 @@ var
   FileStr: string;
   F: Textfile;
 begin
+  if Length(CurTable) = 0 then begin
+    Memo1.Lines.Add('Table not loaded.');
+    Exit;
+  end;
+  Memo1.Lines.Add('Showing Table ' + CurTableFileName);
   StartLine:= Memo1.Lines.Count;
   with CurTable[0] do begin
     CurStr:= Format('Risk of Ruin: %f, UPRO Daily Fail 1 / %d ', [FMyBankr * 100, FUPROBankr]);
@@ -1883,9 +1886,16 @@ begin
 end;
 
 procedure TForm1.CheckBoxInflationClick(Sender: TObject);
+var
+  OldInflation: boolean;
 begin
+  OldInflation:= IsInflation;
   IsInflation:= CheckBoxInflation.Checked;
-  OpenPriceFile;
+  if OldInflation <> IsInflation then begin
+    OpenPriceFile;
+    SetLength(CurTable, 0);
+    CurTableFileName:= '';
+  end;  
 end;
 
 procedure TForm1.RadioGroupBiffClick(Sender: TObject);
