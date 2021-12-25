@@ -1,8 +1,8 @@
 object Form1: TForm1
-  Left = 56
-  Top = 157
+  Left = 179
+  Top = 125
   BorderStyle = bsSingle
-  Caption = 'Biff v.1.24'
+  Caption = 'Biff v.1.25'
   ClientHeight = 629
   ClientWidth = 674
   Color = clBtnFace
@@ -81,6 +81,7 @@ object Form1: TForm1
     Height = 569
     ScrollBars = ssBoth
     TabOrder = 0
+    OnKeyPress = Memo1KeyPress
   end
   object EditCapital: TEdit
     Left = 136
@@ -89,6 +90,7 @@ object Form1: TForm1
     Height = 21
     TabOrder = 1
     Text = '4000'
+    OnKeyPress = NumericEditKeyPress
   end
   object Editrasxod: TEdit
     Left = 136
@@ -97,6 +99,7 @@ object Form1: TForm1
     Height = 21
     TabOrder = 2
     Text = '1'
+    OnKeyPress = NumericEditKeyPress
   end
   object EditDays: TEdit
     Left = 136
@@ -105,6 +108,7 @@ object Form1: TForm1
     Height = 21
     TabOrder = 3
     Text = '2000'
+    OnKeyPress = NumericEditKeyPress
   end
   object EditSims: TEdit
     Left = 136
@@ -113,6 +117,7 @@ object Form1: TForm1
     Height = 21
     TabOrder = 4
     Text = '20000'
+    OnKeyPress = NumericEditKeyPress
   end
   object ButtonTest: TButton
     Left = 232
@@ -140,6 +145,7 @@ object Form1: TForm1
     Height = 21
     TabOrder = 7
     Text = '100'
+    OnKeyPress = FloatEditKeyPress
   end
   object ButtonUPRO: TButton
     Left = 120
@@ -185,6 +191,7 @@ object Form1: TForm1
     Height = 21
     TabOrder = 12
     Text = '10'
+    OnKeyPress = FloatEditKeyPress
   end
   object EditUPROBankr: TEdit
     Left = 144
@@ -193,6 +200,7 @@ object Form1: TForm1
     Height = 21
     TabOrder = 13
     Text = '50000'
+    OnKeyPress = NumericEditKeyPress
   end
   object ButtonBestRatio: TButton
     Left = 16
@@ -219,6 +227,7 @@ object Form1: TForm1
     Height = 21
     TabOrder = 16
     Text = '5000'
+    OnKeyPress = NumericEditKeyPress
   end
   object EditStepDay: TEdit
     Left = 72
@@ -227,10 +236,11 @@ object Form1: TForm1
     Height = 21
     TabOrder = 17
     Text = '1000'
+    OnKeyPress = NumericEditKeyPress
   end
   object ButtonFillTable: TButton
     Left = 128
-    Top = 472
+    Top = 469
     Width = 73
     Height = 25
     Caption = 'Fill Table'
@@ -271,7 +281,7 @@ object Form1: TForm1
   end
   object ButtonOpenTable: TButton
     Left = 16
-    Top = 520
+    Top = 536
     Width = 89
     Height = 25
     Caption = 'Open Table'
@@ -280,7 +290,7 @@ object Form1: TForm1
   end
   object ButtonConvertTable: TButton
     Left = 112
-    Top = 520
+    Top = 536
     Width = 89
     Height = 25
     Caption = 'Show Table'
@@ -310,6 +320,15 @@ object Form1: TForm1
     Height = 17
     Max = 1000
     TabOrder = 25
+  end
+  object ButtonStopFillTable: TButton
+    Left = 16
+    Top = 496
+    Width = 185
+    Height = 25
+    Caption = 'Abort Fill Table Process'
+    TabOrder = 26
+    OnClick = ButtonStopFillTableClick
   end
   object OpenDialog1: TOpenDialog
     Filter = 'table|*.biff'

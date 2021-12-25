@@ -106,6 +106,7 @@ type
     ButtonConvertTable: TButton;
     RadioGroupBiff: TRadioGroup;
     ProgressBar: TProgressBar;
+    ButtonStopFillTable: TButton;
     procedure ButtonTestClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ButtonClearMemoClick(Sender: TObject);
@@ -122,8 +123,11 @@ type
     procedure CheckBoxInflationClick(Sender: TObject);
     procedure RadioGroupBiffClick(Sender: TObject);
     procedure EnableControls(enable: bool);
-    procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure Memo1KeyPress(Sender: TObject; var Key: Char);
+    procedure NumericEditKeyPress(Sender: TObject; var Key: Char);
+    procedure FloatEditKeyPress(Sender: TObject; var Key: Char);
+    procedure ButtonStopFillTableClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -131,6 +135,7 @@ type
     FillTableThread: TFillTableThread;
     CaclBankruptcyThreads: array of TCaclBankruptcyThread;
     IsClosing: bool;
+    CalculationIsRuning: bool;
     MaxThreads: integer;
     TotalSteps: integer;
     TotalStepsTime: real;
@@ -182,6 +187,7 @@ type
     function FindTableRatio(ACapital: real; DayLeft: integer; ATable: TTable): integer;
     procedure FillAllTableProcedure();
     procedure FillAllTable(ANumDay, AStepDay: integer);
+    procedure StopFillTable();
     procedure SaveTable;
     procedure LoadTable;
     function SetTableName: string;
@@ -199,6 +205,7 @@ type
 var
   Form1: TForm1;
   Utils: TUtils;
+  Terminating : bool;
 
 implementation
 
@@ -220,7 +227,8 @@ end;
 
 procedure TBestRatioThread.DoTerminate;
 begin
-  Form1.EnableControls(true);
+  if Terminating = false then
+    Form1.EnableControls(true);
   inherited
 end;
 
@@ -240,7 +248,8 @@ end;
 
 procedure TFillTableThread.DoTerminate;
 begin
-  Form1.EnableControls(true);
+  if Terminating = false then
+    Form1.EnableControls(true);
   inherited
 end;
 
@@ -280,16 +289,18 @@ begin
   DecimalSeparator := '.';
 
   // Init some default values.
-  IsClosing := false;
   ProgressBar.DoubleBuffered := true;
   MaxThreads := Utils.GetCpuCount;
   TotalStepsTime := 0;
   Version := Caption;
+
   LoadIniFile;
   GetAllParameter;
   if IsInflation = false then
     OpenPriceFile; // load price file only if it wasn't loaded before
   LoadTable;
+  EditUPROPer.Text := '0'; // Temporary
+
   for i:= 0 to MaxI do begin
     with ZeroRatioArray[i] do begin
       UPROPerc:= i / MaxI;
@@ -697,7 +708,7 @@ end;
 procedure TForm1.CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
 var t, threadLimit, stepsThread, stepsAdditional: integer;
   c1, c2, f: Int64;
-  //time: string;
+  //time: string; // uncomment for dubug to thrack time
   handles: array of THandle;
 begin
   QueryPerformanceFrequency(f);
@@ -718,6 +729,8 @@ begin
     end;
     WaitForMultipleObjects(threadLimit, Pointer(handles), true, INFINITE);
     Finalize(handles);
+    Finalize(CaclBankruptcyThreads);
+    SetLength(CaclBankruptcyThreads, 0);
 
     // Perform additional steps that have left. stepsAdditional is always less then stepsThread (one full iteration for each thread.)
     //if stepsAdditional > 0 then
@@ -731,7 +744,7 @@ begin
 
   // Calculate execution time.
   QueryPerformanceCounter(c2);
-  //time := FloatToStr((c2-c1)/f*1000);
+  //time := FloatToStr((c2-c1)/f*1000); // uncomment for dubug to thrack time
   TotalStepsTime := TotalStepsTime + (c2-c1)/f*1000;
   Caption := Version + '  Total steps: ' + IntToStr(TotalSteps) + ' av.step msec: ' + Format('%.1f', [TotalStepsTime/TotalSteps]);
 end;
@@ -760,6 +773,8 @@ begin
   for i:= 1 to ANumSim do begin
     TotalCapital:= ACapital;
     for k:= 1 to ANumDay do begin
+      if Terminating then
+        Exit;
       index := MyRandInt(priceDataLength);
       UPROPart:= StartRatio^.UPROPerc * PriceData[index].UPRO;
       if IsBankruptcy then begin
@@ -826,6 +841,8 @@ begin
   Last:=MaxI;
 
   while Result < 0 do begin
+    if Terminating then
+      Break;
   //repeat
     if Last - First = 1 then begin
       if StartRatioArray[First].Total > StartRatioArray[Last].Total  then
@@ -1213,6 +1230,8 @@ begin
   I1:= MaxI div 100;
   CurSim:= Round(NumSim * ((TotalDay / ANumDay) / 100)) * 100;
   repeat
+    if Terminating then
+      Exit;
     CurStartCapital:= ANumDay * StartM;
     if {Advanced} NumAlgo = 2 then
       BestRatio:= FindBestRatioAdv(CurStartCapital, {Rasxod} 1, APercent, ANumDay, CurSim, AStepDay)
@@ -1245,6 +1264,8 @@ begin
     StartM:= 2 / StepM;
     LastRatio:= -1;
     repeat
+      if Terminating then
+        Exit;
       CurStartCapital:= ANumDay * StartM;
       if {Advanced} NumAlgo = 2 then
         BestRatio:= FindBestRatioAdv(CurStartCapital, {Rasxod} 1, APercent, ANumDay, CurSim, AStepDay)
@@ -1306,6 +1327,8 @@ begin
 //      RatioForDay[i].FCapital:= StartCapital * 1000; // RatioForDay[K1].FCapital * 10;
 //    end;
     repeat
+      if Terminating then
+        Exit;
       K2:= FindNotZero(K1);
       if RatioForDay[K1].FCapital < RatioForDay[K2].FCapital then begin
         RatioForDay[K2].FCapital:= 0;
@@ -1414,7 +1437,9 @@ begin
   ProgressBar.Position := 0;
   CurTableFileName:= SetTableName;
   TotalSteps := 0;
+  CalculationIsRuning := true;
   FillAllTable(TotalDay, StepDay);
+  CalculationIsRuning := false;
   ProgressBar.Position := ProgressBar.Max;
   SaveTable;
   SaveIniFile;
@@ -1450,6 +1475,8 @@ begin
     Percent:= MyBankr;
     DiffPercent:= 0;
     for i:= NumBlock - 1 downto 1 do begin
+      if Terminating then
+        Break;
       StatusBar1.Panels[1].Text:= Format('Calculating table for days: %d / %d ', [(i) * AStepDay, ANumDay]);
       StartPercent:= Percent;
       if DiffPercent >= Percent then
@@ -1460,9 +1487,13 @@ begin
       //for k:= 1 to 2 do begin
       k:= 0;
       repeat
+        if Terminating then
+          Break;
         Inc(k);
         m:= 0;
         repeat
+          if Terminating then
+            Break;
           Memo1.Lines.Add(Format('Correction %d _ %d', [k, m]));
           NewPercent:= CorrectPerc(StartCapital / Rasxod, Percent, StartRatio,
                       NumDay, i * StepDay, StepDay, CurTable, FinalRisk);  // New correct percent
@@ -1897,21 +1928,19 @@ end;
 
 procedure TForm1.EnableControls(enable: bool);
 begin
-  if IsClosing then
+  if Terminating then
     Exit;
   Form1.ButtonBestRatio.Enabled := enable;
   Form1.ButtonFillTable.Enabled := enable;
   Form1.ButtonUPRO.Enabled := enable;
+  CheckBoxInflation.Enabled := enable;
+  ButtonFillRatio.Enabled := enable;
+  ButtonOpenTable.Enabled := enable;
 end;
 
 procedure TForm1.WMUpdatePB(var msg: TMessage);
 begin
   ProgressBar.StepIt;
-end;
-
-procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
-begin
-  IsClosing := true;
 end;
 
 procedure TForm1.CreateTablePercent(var ATable: TTable; TargetPercent, Koef: real; ANumDay, AStepDay: integer);
@@ -1933,7 +1962,68 @@ end;
 
 procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
-  CanClose:= MessageDlg('Do you really want to close?', mtCustom, [mbYes, mbNo], 0) = mrYes; 
+  // In case closing was already queried, don't ask permission.
+  if IsClosing then begin
+    CanClose := true;
+    Application.Terminate;
+  end
+  else begin
+  // Set up a termination flag.
+  IsClosing:= MessageDlg('Do you really want to close?', mtCustom, [mbYes, mbNo], 0) = mrYes;
+  Terminating := IsClosing;
+
+  if CalculationIsRuning then
+    CanClose := false // Don't allow to close in case calculation is running.
+  else
+    CanClose := IsClosing; // Otherwise relay on user's chiose.
+  end;
+end;
+
+procedure TForm1.Memo1KeyPress(Sender: TObject; var Key: Char);
+begin
+  case Key of ^A: begin
+    (Sender as TMemo).SelectAll;
+    Key := #0;
+    end;
+  end;  
+end;
+
+procedure TForm1.NumericEditKeyPress(Sender: TObject; var Key: Char);
+begin
+  case key of
+    '0'..'9': ; // numbers
+    #8: ;       // backspace
+    #127: ;     // delete
+    else
+      key := #0;
+  end;
+end;
+
+procedure TForm1.FloatEditKeyPress(Sender: TObject; var Key: Char);
+begin
+  case key of
+    '0'..'9': ; // numbers
+    #8: ;       // backspace
+    #127: ;     // delete
+    '.', ',':
+      if Pos(DecimalSeparator, (Sender as TEdit).Text) = 0 then
+        Key := DecimalSeparator
+      else
+        Key := #0; // decimal separator
+    else
+      key := #0;
+  end;
+end;
+
+procedure TForm1.StopFillTable();
+begin
+  Terminating := true;
+  EnableControls(false);
+end;
+
+procedure TForm1.ButtonStopFillTableClick(Sender: TObject);
+begin
+  StopFillTable();
 end;
 
 end.
