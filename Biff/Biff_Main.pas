@@ -134,6 +134,7 @@ type
     MaxThreads: integer;
     TotalSteps: integer;
     TotalStepsTime: real;
+    Version: string;
     procedure WMUpdatePB(var msg: TMessage); message WM_UPDATE_PB;
   public
     { Public declarations }
@@ -283,6 +284,7 @@ begin
   ProgressBar.DoubleBuffered := true;
   MaxThreads := Utils.GetCpuCount;
   TotalStepsTime := 0;
+  Version := Caption;
   LoadIniFile;
   GetAllParameter;
   if IsInflation = false then
@@ -731,7 +733,7 @@ begin
   QueryPerformanceCounter(c2);
   //time := FloatToStr((c2-c1)/f*1000);
   TotalStepsTime := TotalStepsTime + (c2-c1)/f*1000;
-  Caption := 'Total steps: ' + IntToStr(TotalSteps) + ' av.step msec: ' + Format('%.1f', [TotalStepsTime/TotalSteps]);
+  Caption := Version + '  Total steps: ' + IntToStr(TotalSteps) + ' av.step msec: ' + Format('%.1f', [TotalStepsTime/TotalSteps]);
 end;
 
 procedure TForm1.CalcNumBankruptcySimpleInternal(ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
