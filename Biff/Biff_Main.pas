@@ -134,7 +134,6 @@ type
     MaxThreads: integer;
     TotalSteps: integer;
     TotalStepsTime: real;
-    RandomCache: array of integer;
     procedure WMUpdatePB(var msg: TMessage); message WM_UPDATE_PB;
   public
     { Public declarations }
@@ -287,9 +286,10 @@ begin
   ProgressBar.DoubleBuffered := true;
   MaxThreads := Utils.GetCpuCount;
   TotalStepsTime := 0;
-
   LoadIniFile;
   GetAllParameter;
+  if IsInflation = false then
+    OpenPriceFile; // load price file only if it wasn't loaded before
   LoadTable;
   for i:= 0 to MaxI do begin
     with ZeroRatioArray[i] do begin
@@ -374,10 +374,6 @@ begin
   Memo1.Lines.Clear;
   Memo1.Lines.LoadFromFile(PriceFileName);
   SetLength(PriceData, Memo1.Lines.Count);
-  SetLength(RandomCache, Length(PriceData));
-
-  for i:=0 to Length(PriceData) do
-    RandomCache[i] := i;
 
   for i:= 0 to Memo1.Lines.Count - 1 do begin
     with PriceData[i] do begin
@@ -1886,8 +1882,10 @@ end;
 
 procedure TForm1.CheckBoxInflationClick(Sender: TObject);
 begin
+  CheckBoxInflation.Enabled := false;
   IsInflation:= CheckBoxInflation.Checked;
   OpenPriceFile;
+  CheckBoxInflation.Enabled := true;
 end;
 
 procedure TForm1.RadioGroupBiffClick(Sender: TObject);
