@@ -164,6 +164,8 @@ type
     CurTableFileName: string;
     StartTimeTimer: TDateTime;
     LogFileName: string;
+    Precision: real;   // need for Biff3 Fill Table
+    StartPercentArr: array of real;
 
     procedure OpenPriceFile;
     procedure GetAllParameter;
@@ -311,6 +313,7 @@ begin
     end;
   end;
  SetLogFileName;
+ Memo1.Lines.Add(Format('Precision: %f ', [Precision * 100]));
 end;
 
 procedure TForm1.SetLogFileName;
@@ -326,6 +329,7 @@ end;
 
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
+  SaveLog;
   SaveIniFile;
 end;
 
@@ -420,6 +424,7 @@ procedure TForm1.LoadIniFile;
 var
   AIniFile: INIFiles.TIniFile;
   AFileName: string;
+  i: integer;
 begin
   AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
   AIniFile:= IniFiles.TIniFile.Create(AFileName);
@@ -441,6 +446,11 @@ begin
     CheckBoxInflation.Checked:= AIniFile.ReadBool('Common', 'IsInflation', CheckBoxInflation.Checked);
     CurTableFileName:= AIniFile.ReadString('Common', 'Table File Name', '');
     RadioGroupBiff.ItemIndex:= AIniFile.ReadInteger('Common', 'Num Algo', RadioGroupBiff.ItemIndex);
+    Precision:= AIniFile.ReadFloat('Common', 'Precision %', 1) / 100;
+    SetLength(StartPercentArr, 10);
+    for i:= 0 to High(StartPercentArr) do begin
+      StartPercentArr[i]:= AIniFile.ReadFloat('Start Percent', 'Day: ' + IntToStr((i+1) * 100), (i+1)/10) / 100;
+    end;
   finally
     FreeAndNil(AIniFile);
   end;
@@ -450,6 +460,7 @@ procedure TForm1.SaveIniFile;
 var
   AIniFile: INIFiles.TIniFile;
   AFileName: string;
+  i: integer;
 begin
   GetAllParameter;
   AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
@@ -472,6 +483,11 @@ begin
     AIniFile.WriteBool('Common', 'IsInflation', IsInflation);
     AIniFile.WriteString('Common', 'Table File Name', CurTableFileName);
     AIniFile.WriteInteger('Common', 'Num Algo', RadioGroupBiff.ItemIndex);
+    AIniFile.WriteFloat('Common', 'Precision %', Precision * 100);
+    for i:= 0 to High(StartPercentArr) do begin
+      AIniFile.WriteFloat('Start Percent', 'Day: ' + IntToStr((i+1) * 100), StartPercentArr[i] * 100);
+    end;
+
   finally
     FreeAndNil(AIniFile);
   end;
@@ -1209,7 +1225,7 @@ var
 begin
   UPROFail:= 1 - Power((UPROBankr - 1) / UPROBankr, ANumDay);
   if UPROFail > MyBankr then begin
-    MaxRatio:= MaxI - 1;  // maybe Round(MaxI * 0.99) ??
+    MaxRatio:= Round(MaxI * 0.99); // maybe   MaxI - 1;
     Memo1.Lines.Add('');
     Memo1.Lines.Add(Format(' UPRO Bankruptcy: = %.2f', [UPROFail * 100]) + ' %');
   end else
@@ -1448,7 +1464,8 @@ end;
 procedure TForm1.FillAllTable(ANumDay, AStepDay: integer);
 var
   i, k, m, NumBlock, StartRatio: integer;
-  Percent, NewPercent, StartPercent, DiffPercent, FinalRisk, StepPercent: real;
+  Percent, NewPercent, StartPercent, DiffPercent, FinalRisk, StepPercent, TargetRisk: real;
+  SumaAverage: real;
 label
   ExitUntil;
 begin
@@ -1458,6 +1475,7 @@ begin
   end;
   NumBlock:= ANumDay div AStepDay;
   ProgressBar.Step := ProgressBar.Max div NumBlock;
+  SetLength(CurTable, 0);
   SetLength(CurTable, NumBlock);
     if not IsZero(FUPROPerc) then           // Calculate StartRatio for both Biff 3 and Biff 2
       StartRatio:= Round(FUPROPerc *  MaxI)
@@ -1474,6 +1492,7 @@ begin
     Memo1.Lines.Add(Format('Biff 1 Start Ratio:: %f ', [StartRatio * 100 / MaxI]));
     Percent:= MyBankr;
     DiffPercent:= 0;
+    TargetRisk:= MyBankr * (1 - Precision / 2);
     for i:= NumBlock - 1 downto 1 do begin
       if Terminating then
         Break;
@@ -1486,6 +1505,7 @@ begin
       CurTable[i-1]:= FillRatioForDays((i) * AStepDay, AStepDay, Percent);
       //for k:= 1 to 2 do begin
       k:= 0;
+      SumaAverage:= 0;
       repeat
         if Terminating then
           Break;
@@ -1497,10 +1517,25 @@ begin
           Memo1.Lines.Add(Format('Correction %d _ %d', [k, m]));
           NewPercent:= CorrectPerc(StartCapital / Rasxod, Percent, StartRatio,
                       NumDay, i * StepDay, StepDay, CurTable, FinalRisk);  // New correct percent
-          if (m = 0) and (FinalRisk < MyBankr) and (Abs(FinalRisk - MyBankr) < MyBankr * 0.01) then begin
+ {         if (m = 0) and (FinalRisk < MyBankr) and (Abs(FinalRisk - MyBankr) < MyBankr * Precision) then begin
+            Memo1.Lines.Add(Format('End Correction, Final Risk =  %f', [FinalRisk * 100]));
+            Goto ExitUntil;
+          end;   }
+{          SumaAverage:= SumaAverage + FinalRisk / Percent ;
+          NewPercent:= MyBankr / (SumaAverage / k);
+//          if (m = 0) and (FinalRisk < MyBankr) and (Abs(NewPercent - Percent) < MyBankr * Precision / 2) then begin
+//            Memo1.Lines.Add(Format('End Correction, Final Risk =  %f', [FinalRisk * 100]));
+//            Goto ExitUntil;
+//          end;
+ }
+
+          //NewPercent:= MyBankr / (FinalRisk / Percent) ;
+          NewPercent:= TargetRisk / (FinalRisk / Percent) ;
+          if (m = 0) and (FinalRisk < MyBankr) and (Abs(FinalRisk - MyBankr) < MyBankr * Precision) then begin
             Memo1.Lines.Add(Format('End Correction, Final Risk =  %f', [FinalRisk * 100]));
             Goto ExitUntil;
           end;
+
           if NewPercent < 0 then begin
             Percent:= Percent * 0.95;
             Inc(m);
@@ -1527,6 +1562,7 @@ begin
    StepPercent:= MyBankr / NumBlock;
    for i:= 0 to NumBlock - 1 do begin
     StatusBar1.Panels[1].Text:= Format('Calculating table for days: %d / %d ', [(i+1) * AStepDay, ANumDay]);
+    //CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, StartPercentArr[i]);
     CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, (i+1) * StepPercent);
    // CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay,CurTable[i].FPercent);
 
@@ -1536,6 +1572,11 @@ begin
    end;
   end;
  StatusBar1.Panels[1].Text:='Ready';
+  Memo1.Lines.Add('');
+ Memo1.Lines.Add(Format('Table for Biff %d succesfully created.', [NumAlgo]));
+ Memo1.Lines.Add('Start Time: ' + TimeToStr(StartTimeTimer));
+ Memo1.Lines.Add('End Time: ' + TimeToStr(Now));
+ Memo1.Lines.Add('Duration: ' + TimeToStr(StartTimeTimer - Now));
  Timer1.Enabled:= false;
 end;
 
@@ -1615,7 +1656,7 @@ begin
  // AddBool('A', Advanced);
   AddBool('E', IsInflation);
   TotalStr:= TotalStr + FormatDateTime('yyyy-mm-dd-hh-nn-ss', Now);
-  TotalStr:= TotalStr + '.biff';
+  TotalStr:= Version + '_' + TotalStr + '.biff';
   //Memo1.Lines.Add(TotalStr);
   //StatusBar1.SimpleText:= TotalStr;
   Result:= TotalStr;
@@ -1901,8 +1942,10 @@ begin
       X:= 0;
       Y:= APercent;
     end else begin
-      X:= (FRatio - (1 - DeltaR) * APercent) / DeltaR;
-      Y:= (MyBankr{APercent} - DeltaR * X) / (1 - DeltaR);
+    //  X:= (FRatio - (1 - DeltaR) * APercent) / DeltaR;
+    //  Y:= (MyBankr{APercent} - DeltaR * X) / (1 - DeltaR);
+      X:= 1;
+      Y:= APercent * MyBankr / FRatio;
     end;
     AFinalRisk:= FRatio;
     Memo1.Lines.Add(Format('R0 = %f, R100 = %f, FinalRisk = %f ',
