@@ -30,14 +30,14 @@ object FormDialog: TFormDialog
     Caption = 'Risk of Ruin (%)'
   end
   object Label7: TLabel
-    Left = 40
+    Left = 16
     Top = 288
     Width = 51
     Height = 13
     Caption = 'Total Days'
   end
   object Label8: TLabel
-    Left = 104
+    Left = 80
     Top = 288
     Width = 49
     Height = 13
@@ -136,7 +136,7 @@ object FormDialog: TFormDialog
     end
   end
   object EditTotalDay: TEdit
-    Left = 40
+    Left = 16
     Top = 304
     Width = 49
     Height = 21
@@ -144,7 +144,7 @@ object FormDialog: TFormDialog
     Text = '5000'
   end
   object EditStepDay: TEdit
-    Left = 104
+    Left = 80
     Top = 304
     Width = 49
     Height = 21
@@ -173,5 +173,13 @@ object FormDialog: TFormDialog
       '2.0'
       '3.0')
     TabOrder = 11
+  end
+  object CheckBoxUseCurTable: TCheckBox
+    Left = 136
+    Top = 304
+    Width = 65
+    Height = 17
+    Caption = 'CurTable'
+    TabOrder = 12
   end
 end

@@ -166,6 +166,7 @@ type
     LogFileName: string;
     Precision: real;   // need for Biff3 Fill Table
     StartPercentArr: array of real;
+    ManualStartPercentOn: boolean;
 
     procedure OpenPriceFile;
     procedure GetAllParameter;
@@ -185,7 +186,7 @@ type
     function FindTablePercent(ACapital, ARasxod, APercent: real; ARatio, ANumDay, ANumSim, AStepDay: integer; var ATable: TTable): integer;  // Result 0..100 Perc for UPRO
 
     function FillRatioForDays(ANumDay, AStepDay: integer; APercent:real): TRatioDayArray;
-    procedure FillAllRatio(var ARatioDayArray: TRatioDayArray);
+    procedure FillAllRatio(var ARatioDayArray: TRatioDayArray; AMaxRatio: integer);
     function FindTableRatio(ACapital: real; DayLeft: integer; ATable: TTable): integer;
     procedure FillAllTableProcedure();
     procedure FillAllTable(ANumDay, AStepDay: integer);
@@ -201,7 +202,7 @@ type
     function CorrectPerc(ACapital, APercent: real; ARatio, ANumDay, ACurDay, AStepDay: integer;
                              var ATable: TTable; var AFinalRisk: real): real;  // New correct percent
     procedure CreateTablePercent(var ATable: TTable; TargetPercent, Koef: real; ANumDay, AStepDay: integer);
-
+    procedure CopyPercentFromCurTable;
  end;
 
 var
@@ -447,9 +448,12 @@ begin
     CurTableFileName:= AIniFile.ReadString('Common', 'Table File Name', '');
     RadioGroupBiff.ItemIndex:= AIniFile.ReadInteger('Common', 'Num Algo', RadioGroupBiff.ItemIndex);
     Precision:= AIniFile.ReadFloat('Common', 'Precision %', 1) / 100;
-    SetLength(StartPercentArr, 10);
+    ManualStartPercentOn:= AIniFile.ReadBool('Start Percent', 'ManualStartPercentOn', false);
+    TotalDay:= StrToIntDef(EditTotalDay.Text, 1000);
+    StepDay:= StrToIntDef(EditStepDay.Text, 100);
+    SetLength(StartPercentArr, TotalDay div StepDay);
     for i:= 0 to High(StartPercentArr) do begin
-      StartPercentArr[i]:= AIniFile.ReadFloat('Start Percent', 'Day: ' + IntToStr((i+1) * 100), (i+1)/10) / 100;
+      StartPercentArr[i]:= AIniFile.ReadFloat('Start Percent', 'Day: ' + IntToStr((i+1) * StepDay), (i+1)/10) / 100;
     end;
   finally
     FreeAndNil(AIniFile);
@@ -484,8 +488,10 @@ begin
     AIniFile.WriteString('Common', 'Table File Name', CurTableFileName);
     AIniFile.WriteInteger('Common', 'Num Algo', RadioGroupBiff.ItemIndex);
     AIniFile.WriteFloat('Common', 'Precision %', Precision * 100);
+    AIniFile.WriteBool('Start Percent', 'ManualStartPercentOn', ManualStartPercentOn);
+
     for i:= 0 to High(StartPercentArr) do begin
-      AIniFile.WriteFloat('Start Percent', 'Day: ' + IntToStr((i+1) * 100), StartPercentArr[i] * 100);
+      AIniFile.WriteFloat('Start Percent', 'Day: ' + IntToStr((i+1) * StepDay), StartPercentArr[i] * 100);
     end;
 
   finally
@@ -906,37 +912,8 @@ var
   N, InnerNumSim, CurRatio, First, Last: integer;
   StartRatioArray: TRatioArray;
   StartTime: TDateTime;
-  NumBankr: integer;
-  CurMyBankr: real;
-
-procedure CalcNumBankruptcy1(AInnerNumSim, ACurRatio: integer);  //  copy from simple
-var i, k, Index: integer;
-  TotalCapital, UPROPart: real;
-begin
-  with StartRatioArray[ACurRatio] do begin
-    for i:= 1 to AInnerNumSim do begin
-      TotalCapital:= ACapital;
-      for k:= 1 to ANumDay do begin
-        Index:= Random(N);
-        with PriceData[Index] do begin
-          UPROPart:= UPROPerc * UPRO;
-          if IsBankruptcy then begin
-            if Random(UPROBankr) = 0 then
-              UPROPart:= 0;
-          end;
-          TotalCapital:= TotalCapital * (VOOPerc * VOO + UPROPart) - ARasxod;
-          if TotalCapital <= 0 then begin
-            Inc(Bankruptcy);
-            TotalCapital:= 0;
-            Break;
-          end;
-        end;
-      end;
-    end;
-    Total:= Total + AInnerNumSim;
-    FRatio:= Bankruptcy / Total;
-  end;
-end;
+  NumBankr, CurBankruptcy, CurTotal: integer;
+  CurMyBankr, CurFRatio: real;
 
 procedure CalcNumBankruptcy(AInnerNumSim, ACurRatio: integer);
 var i, k, y, Index, NumBlock: integer;
@@ -969,9 +946,8 @@ begin
           TotalCapital:= TotalCapital * (CurVOOPerc * VOO + UPROPart) - ARasxod;
           if TotalCapital <= 0 then begin
             InterlockedIncrement(Bankruptcy);
-            //TotalCapital:= 0;
+            CurBankruptcy:= Bankruptcy;
             Goto ZeroCapital;
-            //Break;
           end;
         end;
       end;
@@ -980,7 +956,9 @@ begin
   end;
   // Total_EV:= Total_EV + TotalCapital;     if need EV
   Total:= Total + AInnerNumSim;
+  CurTotal:= Total;
   FRatio:= Bankruptcy / Total;
+  CurFRatio:= FRatio;
  // Memo1.Lines.Add(Format('Ratio: %d , %f ', [ACurRatio, FRatio * 100]));
  end;
 end;
@@ -992,22 +970,12 @@ begin
                          [ACapital, ARasxod, APercent*100, ANumDay, ANumSim]));
 
   NumBankr:= 0;
+  CurFRatio:= 0;
   StartRatioArray:= ZeroRatioArray;
   N:= Length(PriceData);
   StartTime:= Now;
   InnerNumSim:= ANumSim div 5;
- {
-  CurRatio:= 100;
-  CalcNumBankruptcy(InnerNumSim, CurRatio);
-  with StartRatioArray[CurRatio] do begin
-    if FRatio > MyBankr then begin
-      First:= 0;
-    end else begin
-      First:= CurRatio;
-    end;
-    Last:= CurRatio;
-  end;
-  }
+
    /////////////    New Algo   !!!!!!!!!!!!    //////////////////
  if Correction then begin
   CurRatio:= 0;
@@ -1028,9 +996,9 @@ begin
    CurMyBankr:= APercent;
    Result:= -1;
  end;
+
   First:= 0;
   Last:= MaxI;
-  //repeat
   while Result < 0 do begin
     if Last - First = 1 then begin
       if StartRatioArray[First].Total > StartRatioArray[Last].Total  then
@@ -1049,7 +1017,7 @@ begin
           if Result < 0 then
             Result:= 0;
         end;
-      end else if FRatio > CurMyBankr then begin
+      end else if CurFRatio > CurMyBankr then begin
         Last:= CurRatio;
         if (First = Last) and (Last > 0) then
           First:= Last - 1;
@@ -1059,17 +1027,11 @@ begin
           Last:= First + 1;
       end;
     end;
-  //until Result >= 0;
   end; // while
   StartTime:= Now - StartTime;
-  //Timer1.Enabled:= false;;
-//  Memo1.Lines.Add('');
   Memo1.Lines.Add('Time: ' + TimeToStr(StartTime));
- // Memo1.Lines.Add(Format('Num UPRO Bankr: %d ', [NumBankr]));
   Memo1.Lines.Add(Format('Day Left: %d,  Best Ratio: %f ', [ANumDay, Result * 100 / MaxI]));
-  //EditUPROPer.Text:= IntToStr(Result);
   EditUPROPer.Text:= FloatToStr(Result * 100 / MaxI);
-
 end;
 
 
@@ -1206,7 +1168,7 @@ var
   StartM, StepM : real;
   UPROFail, CurStartCapital: real;
   i, k, BestRatio, LastRatio, DiffRatio, MaxRatio: integer;
-  I10, I1: integer;
+  I10, I5, I1: integer;
   CurSim: int64;
 
   procedure AddCapital(ACapital: real; ARatio: integer);
@@ -1224,8 +1186,10 @@ var
 
 begin
   UPROFail:= 1 - Power((UPROBankr - 1) / UPROBankr, ANumDay);
-  if UPROFail > MyBankr then begin
-    MaxRatio:= Round(MaxI * 0.99); // maybe   MaxI - 1;
+//  if UPROFail > MyBankr then begin
+  if UPROFail > APercent then begin
+    //MaxRatio:= Round(MaxI * 0.994); // maybe   MaxI - 1;
+    MaxRatio:= MaxI - 1;
     Memo1.Lines.Add('');
     Memo1.Lines.Add(Format(' UPRO Bankruptcy: = %.2f', [UPROFail * 100]) + ' %');
   end else
@@ -1242,9 +1206,11 @@ begin
     RatioForDay[i].FCapital:= 0;
     RatioForDay[i].FNumSim:= 0;
   end;
-  I10:= MaxI div 10;
-  I1:= MaxI div 100;
-  CurSim:= Round(NumSim * ((TotalDay / ANumDay) / 100)) * 100;
+  I10:= MaxI div 10; // 10%
+  I5:= MaxI div 20;  // 5%
+  I1:= MaxI div 100; // 1%
+  //CurSim:= Round(NumSim * ((TotalDay / ANumDay) / 100)) * 100;
+  CurSim:= NumSim;
   repeat
     if Terminating then
       Exit;
@@ -1256,15 +1222,15 @@ begin
 
     if LastRatio >=0 then begin
       DiffRatio:= BestRatio - LastRatio;
-      if DiffRatio > I10 then begin
+      if DiffRatio > I10 then begin       // > 10%
         StepM:= Sqrt(StepM);
-      end
-    //  else if DiffRatio <= 1 then
-    //    StepM:= StepM * 1.5
-    //  else if DiffRatio <= 2 then
-    //    StepM:= StepM * 1.2
-      else  if (DiffRatio <= I1) and (DiffRatio >= 0) then
-        StepM:= StepM * 1.1;
+      end else if (DiffRatio >= 0) then begin
+        if (DiffRatio <= I1)  then begin    //    0% <  < 1%
+          StepM:= StepM * 1.2;
+        end else if DiffRatio <= I5 then begin                           //    1% <  < 5%
+          StepM:= StepM * 1.1;
+        end;
+      end;  
     end;
 
     LastRatio:= BestRatio;
@@ -1273,7 +1239,7 @@ begin
     RatioForDay[BestRatio].FNumSim:= RatioForDay[BestRatio].FNumSim + CurSim;
     //AddCapital(CurStartCapital, BestRatio);
    // Memo1.Lines.Add(Format('Capital: %f , Best Ratio: %d ', [CurStartCapital, BestRatio]));
-  until (BestRatio >= MaxRatio) or (RatioForDay[BestRatio].FNumSim >= 5 * CurSim);
+  until (BestRatio >= MaxRatio) or (DiffRatio < 0) or (RatioForDay[BestRatio].FNumSim >= 5 * CurSim);
 
   if RatioForDay[0].FNumSim = 0 then begin   // not Calculated yet for Ratio = 0
     StepM:= 1.1;
@@ -1304,15 +1270,22 @@ begin
     until BestRatio <= 0;
   end;                  // not Calculated yet for Ratio = 0
  end;                   // with result
- FillAllRatio(Result);
+ FillAllRatio(Result, MaxRatio);
  Result.FPercent:= APercent;
  for i:= 0 to 100 do begin
    k:= i * (MaxI div 100);
    Memo1.Lines.Add(Format('%d: %f ', [k, Result.RatioForDay[k].FCapital]));
  end;
+ if MaxI = 1000 then
+ for i:= 991 to 1000 do begin
+   //k:= i * (MaxI div 100);
+   K:= i;
+   Memo1.Lines.Add(Format('%d: %f ', [k, Result.RatioForDay[k].FCapital]));
+ end;
+
 end;
 
-procedure TForm1.FillAllRatio(var ARatioDayArray: TRatioDayArray);
+procedure TForm1.FillAllRatio(var ARatioDayArray: TRatioDayArray; AMaxRatio: integer);
 var
   i, K1, K2: integer;
   Step: real;
@@ -1342,6 +1315,17 @@ begin
 //    for i:= K1 + 1 to MaxI do begin
 //      RatioForDay[i].FCapital:= StartCapital * 1000; // RatioForDay[K1].FCapital * 10;
 //    end;
+    if AMaxRatio < MaxI then begin
+     repeat
+      K2:= FindNotZero(K1);
+      if RatioForDay[K1].FCapital < RatioForDay[K2].FCapital then begin
+        RatioForDay[K1].FCapital:= 0;
+        K1:= K2;
+      end else begin
+        Break;
+      end;
+     until false;
+    end;
     repeat
       if Terminating then
         Exit;
@@ -1364,11 +1348,27 @@ begin
       K1:= K2;
     until K2 = 0;
     K1:= FindNotZero(MaxI);
-    Step:= RatioForDay[K1 ].FCapital / RatioForDay[K1 - 1].FCapital;
-    for i:= K1 + 1 to MaxI do begin
-      RatioForDay[i].FCapital:= RatioForDay[i - 1].FCapital * Step;
+    if AMaxRatio < MaxI then begin
+      for i:= K1 + 1 to MaxI do begin
+        RatioForDay[i].FCapital:= StartCapital * 1000;
+      end;
+    end else begin
+      Step:= RatioForDay[K1 ].FCapital / RatioForDay[K1 - 1].FCapital;
+      for i:= K1 + 1 to MaxI do begin
+        RatioForDay[i].FCapital:= RatioForDay[i - 1].FCapital * Step;
+      end;
     end;
-
+{    if AMaxRatio < MaxI then begin
+      for i:= K1 + 1 to MaxI do begin
+        RatioForDay[i].FCapital:= StartCapital * 1000;
+      end;
+    end else begin
+      Step:= RatioForDay[K1 ].FCapital / RatioForDay[K1 - 1].FCapital;
+      for i:= K1 + 1 to MaxI do begin
+        RatioForDay[i].FCapital:= RatioForDay[i - 1].FCapital * Step;
+      end;
+    end;
+    }
   end;
  except
    Memo1.Lines.Add('Error in FillAllRatio...')
@@ -1475,6 +1475,7 @@ begin
   end;
   NumBlock:= ANumDay div AStepDay;
   ProgressBar.Step := ProgressBar.Max div NumBlock;
+  CopyPercentFromCurTable ;
   SetLength(CurTable, 0);
   SetLength(CurTable, NumBlock);
     if not IsZero(FUPROPerc) then           // Calculate StartRatio for both Biff 3 and Biff 2
@@ -1484,11 +1485,6 @@ begin
 
   if NumAlgo = 3 then begin
     StartTimer(true, 'Creating Table by Biff 3.0...');
-   { if not IsZero(FUPROPerc) then
-      StartRatio:= Round(FUPROPerc *  MaxI)
-    else
-      StartRatio:= FindBestRatio(StartCapital, Rasxod, MyBankr, NumDay, NumSim);  // Biff 1
-    }
     Memo1.Lines.Add(Format('Biff 1 Start Ratio:: %f ', [StartRatio * 100 / MaxI]));
     Percent:= MyBankr;
     DiffPercent:= 0;
@@ -1530,7 +1526,7 @@ begin
  }
 
           //NewPercent:= MyBankr / (FinalRisk / Percent) ;
-          NewPercent:= TargetRisk / (FinalRisk / Percent) ;
+          //NewPercent:= TargetRisk / (FinalRisk / Percent) ;    // 1.31
           if (m = 0) and (FinalRisk < MyBankr) and (Abs(FinalRisk - MyBankr) < MyBankr * Precision) then begin
             Memo1.Lines.Add(Format('End Correction, Final Risk =  %f', [FinalRisk * 100]));
             Goto ExitUntil;
@@ -1554,17 +1550,46 @@ begin
       SaveLog;
       PostMessage(Form1.Handle, WM_UPDATE_PB, 0, 0);
     end;
-  end else begin
+  end else if NumAlgo = 2 then begin
    StartTimer(true, 'Creating Table by Biff 2.0...');
    Memo1.Lines.Add(Format('Biff 1 Start Ratio:: %f ', [StartRatio * 100 / MaxI]));
  //  FindTablePercent(StartCapital, Rasxod, MyBankr, StartRatio, NumDay, NumSim, StepDay, CurTable);
  //  CreateTablePercent(CurTable, MyBankr, 1.5, NumDay, StepDay);
-   StepPercent:= MyBankr / NumBlock;
-   for i:= 0 to NumBlock - 1 do begin
+//   StepPercent:= MyBankr / NumBlock;
+   //CopyPercentFromCurTable ;
+   for i:= 0 to NumBlock - 2 do begin
+     StatusBar1.Panels[1].Text:= Format('Calculating table for days: %d / %d ', [(i+1) * AStepDay, ANumDay]);
+     CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, StartPercentArr[i]);
+
+   {
+   for i:= 0 to NumBlock - 2 do begin
     StatusBar1.Panels[1].Text:= Format('Calculating table for days: %d / %d ', [(i+1) * AStepDay, ANumDay]);
-    //CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, StartPercentArr[i]);
-    CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, (i+1) * StepPercent);
+    if ManualStartPercentOn then begin
+      Memo1.Lines.Add(Format('Use Manual Start Percent: %.4f ', [StartPercentArr[i]]));
+      CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, StartPercentArr[i]);
+    end else begin
+      Memo1.Lines.Add(Format('Use Start Percent: %.4f ', [(i+1) * StepPercent]));
+      CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, (i+1) * StepPercent);
    // CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay,CurTable[i].FPercent);
+    end;     }
+     SaveTable;
+     SaveLog;
+     PostMessage(Form1.Handle, WM_UPDATE_PB, 0, 0);
+   end;
+  end else begin
+   StartTimer(true, 'Creating Table by Biff 1.5...');
+   Memo1.Lines.Add(Format('Biff 1 Start Ratio:: %f ', [StartRatio * 100 / MaxI]));
+   StepPercent:= MyBankr / NumBlock;
+   for i:= NumBlock - 2 downto 0 do begin
+    StatusBar1.Panels[1].Text:= Format('Calculating table for days: %d / %d ', [(i+1) * AStepDay, ANumDay]);
+    if ManualStartPercentOn then begin
+      Memo1.Lines.Add(Format('Use Manual Start Percent: %.4f ', [StartPercentArr[i]]));
+      CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, StartPercentArr[i]);
+    end else begin
+      Memo1.Lines.Add(Format('Use Start Percent: %.4f ', [(i+1) * StepPercent]));
+      CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay, (i+1) * StepPercent);
+   // CurTable[i]:= FillRatioForDays((i+1) * AStepDay, AStepDay,CurTable[i].FPercent);
+    end;
 
     SaveTable;
     SaveLog;
@@ -1572,7 +1597,7 @@ begin
    end;
   end;
  StatusBar1.Panels[1].Text:='Ready';
-  Memo1.Lines.Add('');
+ Memo1.Lines.Add('');
  Memo1.Lines.Add(Format('Table for Biff %d succesfully created.', [NumAlgo]));
  Memo1.Lines.Add('Start Time: ' + TimeToStr(StartTimeTimer));
  Memo1.Lines.Add('End Time: ' + TimeToStr(Now));
@@ -1832,7 +1857,7 @@ begin
       end;
     end;
     Memo1.Lines.Add(CurStr);
-    CurStr:= 'Percent:' + #9;
+    CurStr:= 'St%:' + #9;
     for k:= 0 to High(CurTable) do begin
       with CurTable[k] do begin
         CurStr:= CurStr + Format('%7.3f' + #9, [FPercent * 100]);
@@ -1937,15 +1962,16 @@ begin
   with StartRatioArray[ARatio] do begin
     R0Perc:= R0 / Total;
     R100Perc:= R100 / Total;
-    DeltaR:= R0Perc + R100Perc;
+    //DeltaR:= R0Perc + R100Perc;
+    DeltaR:= R0Perc ;
     if IsZero(DeltaR) then begin
       X:= 0;
       Y:= APercent;
     end else begin
-    //  X:= (FRatio - (1 - DeltaR) * APercent) / DeltaR;
-    //  Y:= (MyBankr{APercent} - DeltaR * X) / (1 - DeltaR);
-      X:= 1;
-      Y:= APercent * MyBankr / FRatio;
+      X:= (FRatio - (1 - DeltaR) * APercent) / DeltaR;
+      Y:= (MyBankr - DeltaR * X) / (1 - DeltaR);
+     // X:= 1;
+     // Y:= APercent * MyBankr / FRatio;
     end;
     AFinalRisk:= FRatio;
     Memo1.Lines.Add(Format('R0 = %f, R100 = %f, FinalRisk = %f ',
@@ -2067,6 +2093,26 @@ end;
 procedure TForm1.ButtonStopFillTableClick(Sender: TObject);
 begin
   StopFillTable();
+end;
+
+procedure TForm1.CopyPercentFromCurTable;
+var i: integer;
+  StepPercent: real;
+begin
+  if FormDialog.CheckBoxUseCurTable.Checked then begin
+    SetLength(StartPercentArr, Length(CurTable));
+    for i:= 0 to High(StartPercentArr) do begin
+      StartPercentArr[i]:= CurTAble[i].FPercent;
+    end;
+  end else begin
+    if not ManualStartPercentOn then begin
+      SetLength(StartPercentArr, Length(CurTable));
+      StepPercent:= MyBankr / (NumDay div StepDay);
+      for i:= 0 to High(StartPercentArr) do begin
+        StartPercentArr[i]:= (i+1) * StepPercent;
+      end;
+    end;
+  end;  
 end;
 
 end.

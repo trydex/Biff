@@ -27,6 +27,7 @@ type
     EditStepDay: TEdit;
     CheckBoxInflation: TCheckBox;
     RadioGroupBiff: TRadioGroup;
+    CheckBoxUseCurTable: TCheckBox;
   private
     { Private declarations }
   public

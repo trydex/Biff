@@ -2,7 +2,7 @@ object Form1: TForm1
   Left = 31
   Top = 143
   BorderStyle = bsSingle
-  Caption = 'Biff v.1.31'
+  Caption = 'Biff v.1.34'
   ClientHeight = 629
   ClientWidth = 674
   Color = clBtnFace
@@ -323,7 +323,7 @@ object Form1: TForm1
   end
   object ButtonStopFillTable: TButton
     Left = 16
-    Top = 496
+    Top = 504
     Width = 185
     Height = 25
     Caption = 'Abort Fill Table Process'
