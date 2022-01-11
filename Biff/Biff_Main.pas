@@ -1526,11 +1526,18 @@ begin
  }
 
           //NewPercent:= MyBankr / (FinalRisk / Percent) ;
-          //NewPercent:= TargetRisk / (FinalRisk / Percent) ;    // 1.31
+        {          // 1.36
+          NewPercent:= TargetRisk / (FinalRisk / Percent) ;
           if (m = 0) and (FinalRisk < MyBankr) and (Abs(FinalRisk - MyBankr) < MyBankr * Precision) then begin
             Memo1.Lines.Add(Format('End Correction, Final Risk =  %f', [FinalRisk * 100]));
             Goto ExitUntil;
-          end;
+          end;    }
+                  // 1.37
+          NewPercent:= MyBankr / (FinalRisk / Percent) ;
+          if (m = 0) and (Abs(FinalRisk - MyBankr) < MyBankr * Precision / 2) then begin
+            Memo1.Lines.Add(Format('End Correction, Final Risk =  %f', [FinalRisk * 100]));
+            Goto ExitUntil;
+          end;   
 
           if NewPercent < 0 then begin
             Percent:= Percent * 0.95;
@@ -1710,7 +1717,7 @@ begin
   GetAllParameter;
   TotalStr:= '*';
 //  AddStr('N', Format('%d' , [NumSim]));
-  AddStr('R', Format('%.1f', [MyBankr * 100]));
+ // AddStr('R', Format('%.1f', [MyBankr * 100]));     // 1.38
   AddStr('B', Format('%d' , [UPROBankr]));
 //  AddStr('D', Format('%d' , [TotalDay]));
   AddStr('C', Format('%d' , [StepDay]));
@@ -2096,9 +2103,11 @@ begin
 end;
 
 procedure TForm1.CopyPercentFromCurTable;
-var i: integer;
+var
+  i, NumBlock: integer;
   StepPercent: real;
 begin
+  NumBlock:= NumDay div StepDay;
   if FormDialog.CheckBoxUseCurTable.Checked then begin
     SetLength(StartPercentArr, Length(CurTable));
     for i:= 0 to High(StartPercentArr) do begin
@@ -2106,8 +2115,8 @@ begin
     end;
   end else begin
     if not ManualStartPercentOn then begin
-      SetLength(StartPercentArr, Length(CurTable));
-      StepPercent:= MyBankr / (NumDay div StepDay);
+      SetLength(StartPercentArr, NumBlock);
+      StepPercent:= MyBankr / NumBlock;
       for i:= 0 to High(StartPercentArr) do begin
         StartPercentArr[i]:= (i+1) * StepPercent;
       end;
