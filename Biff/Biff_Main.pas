@@ -41,6 +41,9 @@ type
   end;
 
   TTable = array of TRatioDayArray;
+  PTable = ^TTable;
+
+  TCaclBankruptcyAlgo = (AlgoSimple, AlgoAdvanced);
   
   TBestRatioThread = class(TThread)
   public
@@ -58,11 +61,13 @@ type
   
   TCaclBankruptcyThread = class(TThread)
   private
-    ANumSim, ACurRatio, ANumDay: integer;
+    ANumSim, ACurRatio, ANumDay, AStepDay: integer;
     ACapital, ARasxod: real;
     StartRatio: PRatio;
+    CaclBankruptcyAlgo: TCaclBankruptcyAlgo;
+    FirstSeed: Longint;
   public
-    constructor Create(ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
+    constructor Create(FirstSeed: Longint; CaclBankruptcyAlgo: TCaclBankruptcyAlgo; ANumSim, ANumDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure Execute; override;
     destructor Destroy; override;
     //procedure DoTerminate; override;
@@ -139,6 +144,7 @@ type
     MaxThreads: integer;
     TotalSteps: integer;
     TotalStepsTime: real;
+    StepsThrottling: longint;
     Version: string;
     procedure WMUpdatePB(var msg: TMessage); message WM_UPDATE_PB;
   public
@@ -181,13 +187,15 @@ type
     procedure FindBestRatioProcedure;
     function FindBestRatio(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
     function FindBestRatioAdv(ACapital, ARasxod, APercent: real; ANumDay, ANumSim, AStepDay: integer): integer;  // Result 0..100 Perc for UPRO
+    procedure CalcNumBankruptcyAdvInternal(FirstSeed: Longint; AInnerNumSim, ANumDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
-    procedure CalcNumBankruptcySimpleInternal(ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
+    procedure CalcNumBankruptcySimpleInternal(FirstSeed: Longint; ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     function FindTablePercent(ACapital, ARasxod, APercent: real; ARatio, ANumDay, ANumSim, AStepDay: integer; var ATable: TTable): integer;  // Result 0..100 Perc for UPRO
 
     function FillRatioForDays(ANumDay, AStepDay: integer; APercent:real): TRatioDayArray;
     procedure FillAllRatio(var ARatioDayArray: TRatioDayArray; AMaxRatio: integer);
     function FindTableRatio(ACapital: real; DayLeft: integer; ATable: TTable): integer;
+    function FindTableRatio(ACapital: real; DayLeft: integer; ATable: PTable): integer;
     procedure FillAllTableProcedure();
     procedure FillAllTable(ANumDay, AStepDay: integer);
     procedure StopFillTable();
@@ -209,6 +217,7 @@ var
   Form1: TForm1;
   Utils: TUtils;
   Terminating : bool;
+  //DecimalSeparator : char;
 
 implementation
 
@@ -239,7 +248,6 @@ end;
 constructor TFillTableThread.Create();
 begin
   inherited create(false);
-  //FreeOnTerminate := true;
   Priority := tpNormal;
 end;
 
@@ -257,22 +265,29 @@ begin
 end;
 
 
-constructor TCaclBankruptcyThread.Create(ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
+constructor TCaclBankruptcyThread.Create(FirstSeed: Longint; CaclBankruptcyAlgo: TCaclBankruptcyAlgo; ANumSim, ANumDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
 begin
   inherited create(false);
   FreeOnTerminate := true;
   Priority := tpNormal;
+
+  self.CaclBankruptcyAlgo := CaclBankruptcyAlgo;
   self.ANumSim := ANumSim;
   self.ACurRatio := ACurRatio;
   self.ANumDay := ANumDay;
+  self.AStepDay := AStepDay;
   self.ACapital := ACapital;
   self.ARasxod := ARasxod;
   self.StartRatio := StartRatio;
+  self.FirstSeed := FirstSeed;
 end;
 
 procedure TCaclBankruptcyThread.Execute;
 begin
-  Form1.CalcNumBankruptcySimpleInternal(ANumSim, ANumDay, ACapital, ARasxod, StartRatio);
+  if CaclBankruptcyAlgo = AlgoSimple then
+    Form1.CalcNumBankruptcySimpleInternal(FirstSeed, ANumSim, ANumDay, ACapital, ARasxod, StartRatio)
+  else if CaclBankruptcyAlgo = AlgoAdvanced then
+    Form1.CalcNumBankruptcyAdvInternal(FirstSeed, ANumSim, ANumDay, AStepDay, ACapital, ARasxod, StartRatio);
 end;
 
 destructor TCaclBankruptcyThread.Destroy;
@@ -286,7 +301,6 @@ procedure TForm1.FormCreate(Sender: TObject);
 var i: integer;
 begin
   Randomize;
-
   // Update decimal separator only for currect application.
   Application.UpdateFormatSettings := false;
   DecimalSeparator := '.';
@@ -677,7 +691,7 @@ var
           CurVOOPerc:= VOOPer;
           CurUPROPerc:= UPROPer;
         end else begin                     // all other block get Ratio from Table
-          CurUPROPerc:= FindTableRatio(TotalCapital, y * AStepDay, CurTable) / MaxI;
+          CurUPROPerc:= FindTableRatio(TotalCapital, y * AStepDay, @CurTable) / MaxI;
           CurVOOPerc:= 1 - CurUPROPerc;
         end;
         for k:= 1 to AStepDay do begin
@@ -728,10 +742,12 @@ begin
 end;
 
 procedure TForm1.CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
-var t, threadLimit, stepsThread, stepsAdditional: integer;
-  c1, c2, f: Int64;
-  //time: string; // uncomment for dubug to thrack time
-  handles: array of THandle;
+var t, threadLimit, stepsThread: integer;
+    //stepsAdditional: integer;
+    c1, c2, f: Int64;
+    //time: string; // uncomment for debug to track time
+    handles: array of THandle;
+    CurrentTicks: Longint;
 begin
   QueryPerformanceFrequency(f);
   QueryPerformanceCounter(c1);
@@ -742,21 +758,23 @@ begin
   SetLength(CaclBankruptcyThreads, threadLimit);
   SetLength(handles, threadLimit);
   stepsThread := ANumSim div threadLimit; // total number of iterations for each thread
-  stepsAdditional := ANumSim - (stepsThread * threadLimit); // additional calls
+  //stepsAdditional := ANumSim - (stepsThread * threadLimit); // additional calls
+  CurrentTicks := GetTickCount;
 
-    // Create threads.
-    for t:= 0 to threadLimit-1 do begin
-      CaclBankruptcyThreads[t] := TCaclBankruptcyThread.Create(stepsThread, ANumDay, ACapital, ARasxod, StartRatio);
-      handles[t] := CaclBankruptcyThreads[t].Handle;
-    end;
-    WaitForMultipleObjects(threadLimit, Pointer(handles), true, INFINITE);
-    Finalize(handles);
-    Finalize(CaclBankruptcyThreads);
-    SetLength(CaclBankruptcyThreads, 0);
+  // Create threads.
+  for t:= 0 to threadLimit-1 do begin
+    CaclBankruptcyThreads[t] := TCaclBankruptcyThread.Create(CurrentTicks, AlgoSimple, stepsThread, ANumDay, 0, ACapital, ARasxod, StartRatio);
+    handles[t] := CaclBankruptcyThreads[t].Handle;
+    CurrentTicks := CurrentTicks + 1;
+  end;
+  WaitForMultipleObjects(threadLimit, Pointer(handles), true, INFINITE);
+  Finalize(handles);
+  Finalize(CaclBankruptcyThreads);
+  SetLength(CaclBankruptcyThreads, 0);
 
-    // Perform additional steps that have left. stepsAdditional is always less then stepsThread (one full iteration for each thread.)
-    //if stepsAdditional > 0 then
-    //  CalcNumBankruptcySimpleInternal(stepsAdditional, ACurRatio, ANumDay, ACapital, ARasxod, StartRatioArray[ACurRatio]);
+  // Perform additional steps that have left. stepsAdditional is always less then stepsThread (one full iteration for each thread.)
+  //if stepsAdditional > 0 then
+  //  CalcNumBankruptcySimpleInternal(CurrentTicks, stepsAdditional, ACurRatio, ANumDay, ACapital, ARasxod, StartRatioArray[ACurRatio]);
 
   with StartRatio^ do begin
     Total:= Total + ANumSim {stepsThread};
@@ -766,12 +784,15 @@ begin
 
   // Calculate execution time.
   QueryPerformanceCounter(c2);
-  //time := FloatToStr((c2-c1)/f*1000); // uncomment for dubug to thrack time
+  //time := FloatToStr((c2-c1)/f*1000); // uncomment for debug to track time
   TotalStepsTime := TotalStepsTime + (c2-c1)/f*1000;
-  Caption := Version + '  Total steps: ' + IntToStr(TotalSteps) + ' av.step msec: ' + Format('%.1f', [TotalStepsTime/TotalSteps]);
+  if CurrentTicks - StepsThrottling >= 1000 then begin
+    StepsThrottling := GetTickCount;
+    Caption := Version + '  Total steps: ' + IntToStr(TotalSteps) + ' av.step msec: ' + Format('%.1f', [TotalStepsTime/TotalSteps]);
+  end;
 end;
 
-procedure TForm1.CalcNumBankruptcySimpleInternal(ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
+procedure TForm1.CalcNumBankruptcySimpleInternal(FirstSeed: Longint; ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
 var i, k, index, priceDataLength : integer;
   TotalCapital, UPROPart: real;
   RandSeed: Longint;
@@ -790,7 +811,7 @@ end;
 
 begin
   priceDataLength:= Length(PriceData);
-  RandSeed := GetTickCount;
+  RandSeed := FirstSeed;
 
   for i:= 1 to ANumSim do begin
     TotalCapital:= ACapital;
@@ -798,15 +819,15 @@ begin
       if Terminating then
         Exit;
       index := MyRandInt(priceDataLength);
-      UPROPart:= StartRatio^.UPROPerc * PriceData[index].UPRO;
+      UPROPart:= StartRatio.UPROPerc * PriceData[index].UPRO;
       if IsBankruptcy then begin
         if MyRandInt(UPROBankr) = 0 then
           UPROPart:= 0;
       end;
 
-      TotalCapital:= TotalCapital * (StartRatio^.VOOPerc * PriceData[index].VOO + UPROPart) - ARasxod;
+      TotalCapital:= TotalCapital * (StartRatio.VOOPerc * PriceData[index].VOO + UPROPart) - ARasxod;
       if TotalCapital <= 0 then begin
-        InterlockedIncrement(StartRatio^.Bankruptcy);
+        InterlockedIncrement(StartRatio.Bankruptcy);
         TotalCapital:= 0;
         Break;
       end;
@@ -905,62 +926,119 @@ begin
 
 end;
 
-
-
-function TForm1.FindBestRatioAdv(ACapital, ARasxod, APercent: real; ANumDay, ANumSim, AStepDay: integer): integer;  // Result 0..100 Perc for UPRO
-var
-  N, InnerNumSim, CurRatio, First, Last: integer;
-  StartRatioArray: TRatioArray;
-  StartTime: TDateTime;
-  NumBankr, CurBankruptcy, CurTotal: integer;
-  CurMyBankr, CurFRatio: real;
-
-procedure CalcNumBankruptcy(AInnerNumSim, ACurRatio: integer);
-var i, k, y, Index, NumBlock: integer;
+procedure TForm1.CalcNumBankruptcyAdvInternal(FirstSeed: Longint; AInnerNumSim, ANumDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
+var i, k, y, index, NumBlock, priceDataLength: integer;
   TotalCapital, UPROPart: real;
   CurVOOPerc, CurUPROPerc: real;
+  RandSeed: Longint;
   label ZeroCapital;
+
+  function MyRandInt(Range: integer) : integer;
+  asm 
+      PUSH    EBX
+      XOR     EBX, EBX
+      IMUL    EDX,[EBX].RandSeed,08088405H
+      INC     EDX
+      MOV     [EBX].RandSeed,EDX
+      MUL     EDX
+      MOV     EAX,EDX
+      POP     EBX
+  end;
+
 begin
+  RandSeed := FirstSeed;
+  priceDataLength:= Length(PriceData);
   NumBlock:= ANumDay div AStepDay;
-  with StartRatioArray[ACurRatio] do begin
-   for i:= 1 to AInnerNumSim do begin
+
+  for i:= 1 to AInnerNumSim do begin
     TotalCapital:= ACapital;
     for y:= NumBlock downto 1 do begin
       if y = NumBlock then begin           // first block
-        CurVOOPerc:= VOOPerc;
-        CurUPROPerc:= UPROPerc;
+        CurVOOPerc:= StartRatio.VOOPerc;
+        CurUPROPerc:= StartRatio.UPROPerc;
       end else begin                     // all other block get Ratio from Table
-        CurUPROPerc:= FindTableRatio(TotalCapital, y * AStepDay, CurTable) / MaxI;
+        CurUPROPerc:= FindTableRatio(TotalCapital, y * AStepDay, @CurTable) / MaxI;
         CurVOOPerc:= 1 - CurUPROPerc;
       end;
       for k:= 1 to AStepDay do begin
-        Index:= Random(N);
-        with PriceData[Index] do begin
-          UPROPart:= CurUPROPerc * UPRO;
-          if IsBankruptcy then begin
-            if Random(UPROBankr) = 0 then begin
-              InterlockedIncrement(NumBankr);
-              UPROPart:= 0;
-            end;
+        index:= MyRandInt(priceDataLength);
+        UPROPart:= CurUPROPerc * PriceData[index].UPRO;
+        if IsBankruptcy then begin
+          if MyRandInt(UPROBankr) = 0 then begin
+            UPROPart:= 0;
           end;
-          TotalCapital:= TotalCapital * (CurVOOPerc * VOO + UPROPart) - ARasxod;
-          if TotalCapital <= 0 then begin
-            InterlockedIncrement(Bankruptcy);
-            CurBankruptcy:= Bankruptcy;
-            Goto ZeroCapital;
-          end;
+        end;
+        TotalCapital:= TotalCapital * (CurVOOPerc * PriceData[index].VOO + UPROPart) - ARasxod;
+        if TotalCapital <= 0 then begin
+          InterlockedIncrement(StartRatio.Bankruptcy);
+          Goto ZeroCapital;
         end;
       end;
     end;
-    ZeroCapital://
+  ZeroCapital:
   end;
+
+end;
+
+function TForm1.FindBestRatioAdv(ACapital, ARasxod, APercent: real; ANumDay, ANumSim, AStepDay: integer): integer;  // Result 0..100 Perc for UPRO
+var
+  InnerNumSim, CurRatio, First, Last: integer;
+  StartRatioArray: TRatioArray;
+  StartTime: TDateTime;
+  CurMyBankr, CurFRatio: real;
+
+procedure CalcNumBankruptcyAdv(AInnerNumSim: integer; StartRatio: PRatio);
+var t, threadLimit, stepsThread: integer;
+    //stepsAdditional: integer;
+    c1, c2, f: Int64;
+    //time: string; // uncomment for debug to track time
+    handles: array of THandle;
+    CurrentTicks: Longint;
+begin
+  QueryPerformanceFrequency(f);
+  QueryPerformanceCounter(c1);
+
+  threadLimit := MaxThreads;
+  if threadLimit > AInnerNumSim then
+    threadLimit := AInnerNumSim;
+  SetLength(CaclBankruptcyThreads, threadLimit);
+  SetLength(handles, threadLimit);
+  stepsThread := AInnerNumSim div threadLimit; // total number of iterations for each thread
+  //stepsAdditional := AInnerNumSim - (stepsThread * threadLimit); // additional calls
+  CurrentTicks := GetTickCount;
+
+  // Create threads.
+  for t:= 0 to threadLimit-1 do begin
+    CaclBankruptcyThreads[t] := TCaclBankruptcyThread.Create(CurrentTicks, AlgoAdvanced, stepsThread, ANumDay, AStepDay, ACapital, ARasxod, StartRatio);
+    handles[t] := CaclBankruptcyThreads[t].Handle;
+    CurrentTicks := CurrentTicks + 1;
+  end;
+  WaitForMultipleObjects(threadLimit, Pointer(handles), true, INFINITE);
+  Finalize(handles);
+  Finalize(CaclBankruptcyThreads);
+  SetLength(CaclBankruptcyThreads, 0);
+
+  // Perform additional steps that have left. stepsAdditional is always less then stepsThread (one full iteration for each thread.)
+  //if stepsAdditional > 0 then
+  //  CalcNumBankruptcyAdvInternal(CurrentTicks, stepsAdditional, ACurRatio, ANumDay, ACapital, ARasxod, StartRatioArray[ACurRatio]);
+
   // Total_EV:= Total_EV + TotalCapital;     if need EV
-  Total:= Total + AInnerNumSim;
-  CurTotal:= Total;
-  FRatio:= Bankruptcy / Total;
-  CurFRatio:= FRatio;
- // Memo1.Lines.Add(Format('Ratio: %d , %f ', [ACurRatio, FRatio * 100]));
- end;
+  with StartRatio^ do begin
+    Total:= Total + AInnerNumSim;
+    FRatio:= Bankruptcy / Total;
+    CurFRatio:= FRatio;  
+  end;
+  InterlockedIncrement(TotalSteps);
+
+  // Calculate execution time.
+  QueryPerformanceCounter(c2);
+  //time := FloatToStr((c2-c1)/f*1000); // uncomment for debug to track time
+  TotalStepsTime := TotalStepsTime + (c2-c1)/f*1000;
+
+  if CurrentTicks - StepsThrottling >= 1000 then begin
+    StepsThrottling := GetTickCount;
+    Caption := Version + '  Total steps: ' + IntToStr(TotalSteps) + ' av.step msec: ' + Format('%.1f', [TotalStepsTime/TotalSteps]);
+  end;
 end;
 
 begin
@@ -968,47 +1046,46 @@ begin
   Memo1.Lines.Add('');
   Memo1.Lines.Add(Format('Capital: %.0f, Rasxod: %.0f, Percent: %.4f, Days: %d, Sim: %d ',
                          [ACapital, ARasxod, APercent*100, ANumDay, ANumSim]));
-
-  NumBankr:= 0;
   CurFRatio:= 0;
   StartRatioArray:= ZeroRatioArray;
-  N:= Length(PriceData);
   StartTime:= Now;
   InnerNumSim:= ANumSim div 5;
 
    /////////////    New Algo   !!!!!!!!!!!!    //////////////////
- if Correction then begin
-  CurRatio:= 0;
-  CalcNumBankruptcySimple(ANumSim, ANumDay, ACapital, ARasxod, @(StartRatioArray[CurRatio]));
-  with StartRatioArray[CurRatio] do begin
-    CurMyBankr:= MyBankr - FRatio;
-    Total:= 0;
-    Bankruptcy:= 0;
-    FRatio:= 0;
-  end;
-  if CurMyBankr < 0 then begin
-    Result:= 0;
-  end else begin
+  if Correction then begin
+    CurRatio:= 0;
+    CalcNumBankruptcySimple(ANumSim, ANumDay, ACapital, ARasxod, @(StartRatioArray[CurRatio]));
+    with StartRatioArray[CurRatio] do begin
+      CurMyBankr:= MyBankr - FRatio;
+      Total:= 0;
+      Bankruptcy:= 0;
+      FRatio:= 0;
+    end;
+    if CurMyBankr < 0 then begin
+      Result:= 0;
+    end else begin
+      Result:= -1;
+    end;
+  end else begin                 // not correction
+    //CurMyBankr:= MyBankr;
+    CurMyBankr:= APercent;
     Result:= -1;
   end;
- end else begin                 // not correction
-   //CurMyBankr:= MyBankr;
-   CurMyBankr:= APercent;
-   Result:= -1;
- end;
 
   First:= 0;
   Last:= MaxI;
   while Result < 0 do begin
+    if Terminating then
+      Break;
     if Last - First = 1 then begin
-      if StartRatioArray[First].Total > StartRatioArray[Last].Total  then
+      if StartRatioArray[First].Total > StartRatioArray[Last].Total then
         CurRatio:= Last
       else
         CurRatio:= First;
     end else begin
       CurRatio:= (First + Last) div 2;
     end;
-    CalcNumBankruptcy(InnerNumSim, CurRatio);
+    CalcNumBankruptcyAdv(InnerNumSim, @(StartRatioArray[CurRatio]));
     with StartRatioArray[CurRatio] do begin
       if Total >= ANumSim then begin    // End calculation
         Result:= CurRatio;
@@ -1375,19 +1452,19 @@ begin
  end;
 end ;
 
-function TForm1.FindTableRatio(ACapital: real; DayLeft: integer; ATable: TTable): integer;
+function TForm1.FindTableRatio(ACapital: real; DayLeft: integer; ATable: PTable): integer;
 var
   i, Index, First, Last, Pivot: integer;
 begin
   Index:= -1;
-  for i:= 0 to High(ATable) do begin
+  for i:= 0 to High(ATable^) do begin
     if CurTable[i].FDay = DayLeft then begin
       Index:= i;
       Break;
     end;
   end;
   if Index >= 0 then begin
-    with ATable[Index] do begin
+    with ATable^[Index] do begin
       if IsZero(RatioForDay[100].FCapital)  then
         Last:= MaxI - 1
       else
@@ -1453,6 +1530,7 @@ begin
   ProgressBar.Position := 0;
   CurTableFileName:= SetTableName;
   TotalSteps := 0;
+  StepsThrottling := GetTickCount;
   CalculationIsRuning := true;
   FillAllTable(TotalDay, StepDay);
   CalculationIsRuning := false;
@@ -1922,7 +2000,7 @@ begin
         CurVOOPerc:= VOOPerc;
         CurUPROPerc:= UPROPerc;
       end else if y >= CurBlock then begin                     // all other block get Ratio from Table
-        CurUPROPerc:= FindTableRatio(TotalCapital, y * AStepDay, ATable) / MaxI;
+        CurUPROPerc:= FindTableRatio(TotalCapital, y * AStepDay, @ATable) / MaxI;
         CurVOOPerc:= 1 - CurUPROPerc;
       end;
       if y = CurBlock then begin
