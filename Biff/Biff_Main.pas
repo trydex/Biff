@@ -2030,7 +2030,7 @@ begin
     R100Perc:= R100 / Total;
     //DeltaR:= R0Perc + R100Perc;
     DeltaR:= R0Perc ;
-    if IsZero(DeltaR) then begin
+    if IsZero(DeltaR) or IsZero(1 - DeltaR) then begin
       X:= 0;
       Y:= APercent;
     end else begin
