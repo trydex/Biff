@@ -1498,6 +1498,7 @@ begin
       Exit;
     if Res = mrOk then begin
       CopyParameterToMain;
+      EditDays.Text:= EditTotalDay.Text;
       GetAllParameter;
       SaveIniFile;
       Correction:= false;
