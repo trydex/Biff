@@ -1486,15 +1486,7 @@ begin
   GetAllParameter;
   FillRatioForDays(NumDay, StepDay, MyBankr);
 end;
-       {
-procedure TForm1.ButtonFindAdvClick(Sender: TObject);
-var
-  BestRatio: integer;
-begin
-  GetAllParameter;
-  BestRatio:= FindBestRatioAdv(StartCapital, Rasxod, NumDay, NumSim, StepDay);
-end;
-        }
+
 procedure TForm1.ButtonFillTableClick(Sender: TObject);
 var
   Res: TModalResult;
@@ -1578,7 +1570,7 @@ begin
             Break;
           Memo1.Lines.Add(Format('Correction %d _ %d', [k, m]));
           NewPercent:= CorrectPerc(StartCapital / Rasxod, Percent, StartRatio,
-                      NumDay, i * StepDay, StepDay, CurTable, FinalRisk);  // New correct percent
+                      ANumDay, i * AStepDay, AStepDay, CurTable, FinalRisk);  // New correct percent
  {         if (m = 0) and (FinalRisk < MyBankr) and (Abs(FinalRisk - MyBankr) < MyBankr * Precision) then begin
             Memo1.Lines.Add(Format('End Correction, Final Risk =  %f', [FinalRisk * 100]));
             Goto ExitUntil;
@@ -1617,7 +1609,7 @@ begin
       Memo1.Lines.Add(Format('End Correction on 10 iterration, Final Risk =  %f', [FinalRisk * 100]));
       ExitUntil:
       DiffPercent:= StartPercent - Percent;
-      //CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable, FinalRisk);  // New correct percent
+      //CorrectPerc(StartCapital, Percent, StartRatio, ANumDay, i * AStepDay, AStepDay, CurTable, FinalRisk);  // New correct percent
 
       SaveTable;
       SaveLog;
@@ -1626,8 +1618,8 @@ begin
   end else if NumAlgo = 2 then begin
    StartTimer(true, 'Creating Table by Biff 2.0...');
    Memo1.Lines.Add(Format('Biff 1 Start Ratio:: %f ', [StartRatio * 100 / MaxI]));
- //  FindTablePercent(StartCapital, Rasxod, MyBankr, StartRatio, NumDay, NumSim, StepDay, CurTable);
- //  CreateTablePercent(CurTable, MyBankr, 1.5, NumDay, StepDay);
+ //  FindTablePercent(StartCapital, Rasxod, MyBankr, StartRatio, ANumDay, NumSim, AStepDay, CurTable);
+ //  CreateTablePercent(CurTable, MyBankr, 1.5, ANumDay, AStepDay);
 //   StepPercent:= MyBankr / NumBlock;
    //CopyPercentFromCurTable ;
    for i:= 0 to NumBlock - 2 do begin
