@@ -194,7 +194,6 @@ type
 
     function FillRatioForDays(ANumDay, AStepDay: integer; APercent:real): TRatioDayArray;
     procedure FillAllRatio(var ARatioDayArray: TRatioDayArray; AMaxRatio: integer);
-    function FindTableRatio(ACapital: real; DayLeft: integer; ATable: TTable): integer;
     function FindTableRatio(ACapital: real; DayLeft: integer; ATable: PTable): integer;
     procedure FillAllTableProcedure();
     procedure FillAllTable(ANumDay, AStepDay: integer);
