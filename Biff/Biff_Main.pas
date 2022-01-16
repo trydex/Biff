@@ -45,6 +45,9 @@ type
 
   TCaclBankruptcyAlgo = (AlgoSimple, AlgoAdvanced);
   
+
+  TArrayReal = array of real;    // for sort array of Total_EV
+  
   TBestRatioThread = class(TThread)
   public
     constructor Create();
@@ -210,6 +213,8 @@ type
                              var ATable: TTable; var AFinalRisk: real): real;  // New correct percent
     procedure CreateTablePercent(var ATable: TTable; TargetPercent, Koef: real; ANumDay, AStepDay: integer);
     procedure CopyPercentFromCurTable;
+    procedure qSort(var A: TArrayReal; min, max: Integer);
+
  end;
 
 var
@@ -593,6 +598,9 @@ var i, k, N, Index, UPROBankrot: integer;
   VOOPer, UPROPer, RePerc: real;
   StartTime: TdateTime;
   CanRebalance: boolean;
+  CurArrayReal: TArrayReal;  // 1.39
+  CurPercentile: real;
+
 begin
   Memo1.Lines.Add('');
   StartTimer(true, 'Calculating simple EV  ...');
@@ -610,8 +618,9 @@ begin
   StartUPRO:= StartCapital * UPROPer;
   RasxodVOO:= Rasxod * VOOPer;
   RasxodUPRO:= Rasxod * UPROPer;
+  SetLength(CurArrayReal, NumSim);  // 1.39
   StartTime:= Now;
-  for i:= 1 to NumSim do begin
+  for i:= 0 to NumSim - 1 do begin  // 1.39
     VOOCapital:= StartVOO;
     UPROCapital:= StartUPRO;
     TotalCapital:= StartCapital;
@@ -657,7 +666,9 @@ begin
       end;
     end;
     Total_EV:= Total_EV + TotalCapital;
+    CurArrayReal[i]:= TotalCapital;  // 1.39
   end;
+  qSort(CurArrayReal, 0, High(CurArrayReal));   // 1.39
   StartTime:= Now - StartTime;
   Total_EV:= Total_EV / NumSim;
   Total_Day:= Power(Total_EV / StartCapital, 1 / NumDay);;
@@ -667,6 +678,18 @@ begin
   Memo1.Lines.Add(Format('EV daily:  %.6f ', [Total_Day]));
   Memo1.Lines.Add(Format('Bankruptcy:  %d ( %f ) ', [UPROBankrot, UPROBankrot * 100 / NumSim]));
   Memo1.Lines.Add('');
+
+  CurPercentile:= CurArrayReal[((10 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('10th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((25 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('25th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((50 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('50th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((75 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('75th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((90 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('90th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+
   Timer1.Enabled:= false;
 end;
 
@@ -675,6 +698,8 @@ var
   N, UPROBankruptcy: integer;
   VOOPer, UPROPer, Total_EV, Total_Day: real;
   StartTime: TDateTime;
+  CurArrayReal: TArrayReal;  // 1.39
+  CurPercentile: real;
 
   procedure CalcNumBankruptcyEV(ACapital, ARasxod: real; ANumDay, ANumSim, AStepDay: integer);
   var i, k, y, Index, NumBlock: integer;
@@ -683,7 +708,7 @@ var
     label ZeroCapital;
   begin
     NumBlock:= ANumDay div AStepDay;
-    for i:= 1 to ANumSim do begin
+    for i:= 0 to ANumSim - 1 do begin
       TotalCapital:= ACapital;
       for y:= NumBlock downto 1 do begin
         if y = NumBlock then begin           // first block
@@ -713,6 +738,7 @@ var
       end;
       ZeroCapital://
       Total_EV:= Total_EV + TotalCapital;    // if need EV
+      CurArrayReal[i]:= TotalCapital;  // 1.39
     end;
     // Memo1.Lines.Add(Format('Ratio: %d , %f ', [ACurRatio, FRatio * 100]));
   end;
@@ -726,7 +752,9 @@ begin
   Total_EV:= 0;
   UPROBankruptcy:= 0;
   StartTime:= Now;
-    CalcNumBankruptcyEV(StartCapital / Rasxod, 1, NumDay, NumSim, StepDay);
+  SetLength(CurArrayReal, NumSim);  // 1.39
+  CalcNumBankruptcyEV(StartCapital / Rasxod, 1, NumDay, NumSim, StepDay);
+  qSort(CurArrayReal, 0, High(CurArrayReal));    // 1.39
   StartTime:= Now - StartTime;
   Total_EV:= Total_EV / NumSim;
   Total_EV:= Total_EV * Rasxod;
@@ -737,8 +765,47 @@ begin
   Memo1.Lines.Add(Format('EV daily:  %.6f ', [Total_Day]));
   Memo1.Lines.Add(Format('Bankruptcy:  %d ( %f ) ', [UPROBankruptcy, UPROBankruptcy * 100 / NumSim]));
   Memo1.Lines.Add('');
+  CurPercentile:= CurArrayReal[((10 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('10th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((25 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('25th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((50 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('50th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((75 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('75th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((90 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('90th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+
+{  Memo1.Lines.Add(Format('25th Percentile: %f ', [CurArrayReal[((25 * NumSim) div 100) - 1]]));
+  Memo1.Lines.Add(Format('50th Percentile: %f ', [CurArrayReal[((50 * NumSim) div 100) - 1]]));
+  Memo1.Lines.Add(Format('75th Percentile: %f ', [CurArrayReal[((75 * NumSim) div 100) - 1]]));
+  Memo1.Lines.Add(Format('90th Percentile: %f ', [CurArrayReal[((90 * NumSim) div 100) - 1]]));
+ }
   Timer1.Enabled:= false;
 end;
+
+procedure TForm1.qSort(var A: TArrayReal; min, max: Integer);
+var
+  i, j: integer;
+  supp, tmp: real;
+begin
+  supp:=A[max-((max-min) div 2)];
+  i:=min; j:=max;
+  while i<j do
+    begin
+      while A[i]<supp do i:=i+1;
+      while A[j]>supp do j:=j-1;
+      if i<=j then
+        begin
+          tmp:=A[i]; A[i]:=A[j]; A[j]:=tmp;
+          i:=i+1; j:=j-1;
+        end;
+    end;
+  if min<j then qSort(A, min, j);
+  if i<max then qSort(A, i, max);
+end;
+
+
 
 procedure TForm1.CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
 var t, threadLimit, stepsThread: integer;
@@ -1496,15 +1563,7 @@ begin
   GetAllParameter;
   FillRatioForDays(NumDay, StepDay, MyBankr);
 end;
-       {
-procedure TForm1.ButtonFindAdvClick(Sender: TObject);
-var
-  BestRatio: integer;
-begin
-  GetAllParameter;
-  BestRatio:= FindBestRatioAdv(StartCapital, Rasxod, NumDay, NumSim, StepDay);
-end;
-        }
+
 procedure TForm1.ButtonFillTableClick(Sender: TObject);
 var
   Res: TModalResult;
@@ -1516,6 +1575,7 @@ begin
       Exit;
     if Res = mrOk then begin
       CopyParameterToMain;
+      EditDays.Text:= EditTotalDay.Text;
       GetAllParameter;
       SaveIniFile;
       Correction:= false;
@@ -1589,7 +1649,7 @@ begin
             Break;
           Memo1.Lines.Add(Format('Correction %d _ %d', [k, m]));
           NewPercent:= CorrectPerc(StartCapital / Rasxod, Percent, StartRatio,
-                      NumDay, i * StepDay, StepDay, CurTable, FinalRisk);  // New correct percent
+                      ANumDay, i * AStepDay, AStepDay, CurTable, FinalRisk);  // New correct percent
  {         if (m = 0) and (FinalRisk < MyBankr) and (Abs(FinalRisk - MyBankr) < MyBankr * Precision) then begin
             Memo1.Lines.Add(Format('End Correction, Final Risk =  %f', [FinalRisk * 100]));
             Goto ExitUntil;
@@ -1628,7 +1688,7 @@ begin
       Memo1.Lines.Add(Format('End Correction on 10 iterration, Final Risk =  %f', [FinalRisk * 100]));
       ExitUntil:
       DiffPercent:= StartPercent - Percent;
-      //CorrectPerc(StartCapital, Percent, StartRatio, NumDay, i * StepDay, StepDay, CurTable, FinalRisk);  // New correct percent
+      //CorrectPerc(StartCapital, Percent, StartRatio, ANumDay, i * AStepDay, AStepDay, CurTable, FinalRisk);  // New correct percent
 
       SaveTable;
       SaveLog;
@@ -1637,8 +1697,8 @@ begin
   end else if NumAlgo = 2 then begin
    StartTimer(true, 'Creating Table by Biff 2.0...');
    Memo1.Lines.Add(Format('Biff 1 Start Ratio:: %f ', [StartRatio * 100 / MaxI]));
- //  FindTablePercent(StartCapital, Rasxod, MyBankr, StartRatio, NumDay, NumSim, StepDay, CurTable);
- //  CreateTablePercent(CurTable, MyBankr, 1.5, NumDay, StepDay);
+ //  FindTablePercent(StartCapital, Rasxod, MyBankr, StartRatio, ANumDay, NumSim, AStepDay, CurTable);
+ //  CreateTablePercent(CurTable, MyBankr, 1.5, ANumDay, AStepDay);
 //   StepPercent:= MyBankr / NumBlock;
    //CopyPercentFromCurTable ;
    for i:= 0 to NumBlock - 2 do begin
@@ -2048,7 +2108,7 @@ begin
     R100Perc:= R100 / Total;
     //DeltaR:= R0Perc + R100Perc;
     DeltaR:= R0Perc ;
-    if IsZero(DeltaR) then begin
+    if IsZero(DeltaR) or IsZero(1 - DeltaR) then begin
       X:= 0;
       Y:= APercent;
     end else begin
