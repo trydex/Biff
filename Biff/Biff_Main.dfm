@@ -2,7 +2,7 @@ object Form1: TForm1
   Left = 31
   Top = 159
   BorderStyle = bsSingle
-  Caption = 'Biff v.1.42'
+  Caption = 'Biff v.1.51'
   ClientHeight = 629
   ClientWidth = 674
   Color = clBtnFace
@@ -73,6 +73,13 @@ object Form1: TForm1
     Width = 49
     Height = 13
     Caption = 'Step Days'
+  end
+  object Label9: TLabel
+    Left = 160
+    Top = 312
+    Width = 32
+    Height = 13
+    Caption = 'Label9'
   end
   object Memo1: TMemo
     Left = 224
@@ -218,6 +225,7 @@ object Form1: TForm1
     Height = 25
     Caption = 'Fill One Row Table'
     TabOrder = 15
+    Visible = False
     OnClick = ButtonFillRatioClick
   end
   object EditTotalDay: TEdit
@@ -329,6 +337,22 @@ object Form1: TForm1
     Caption = 'Abort Fill Table Process'
     TabOrder = 26
     OnClick = ButtonStopFillTableClick
+  end
+  object CheckBoxReRatio: TCheckBox
+    Left = 16
+    Top = 392
+    Width = 137
+    Height = 17
+    Caption = 'ReRatio each day'
+    TabOrder = 27
+  end
+  object EditReRatioDAy: TEdit
+    Left = 128
+    Top = 392
+    Width = 73
+    Height = 21
+    TabOrder = 28
+    Text = '1'
   end
   object OpenDialog1: TOpenDialog
     Filter = 'table|*.biff'
