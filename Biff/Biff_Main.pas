@@ -223,7 +223,7 @@ type
     function CheckFinishedTable(ANumDay, AStepDay: integer): integer;
     function CreateExtraTable(ATable: TTable): TTable;
     function CorrectExtraTable(ATable: TTable; var AExtraTable: TTable; ACurBlock: integer): TTable;
-    function CalcNumBankruptcyExtra(ACapital, ARasxod: real; ANumDay, ANumSim, AStepDay: integer): real;
+    procedure CalcNumBankruptcyExtra(ACapital, ARasxod: real; ANumDay, ANumSim, AStepDay: integer; StartRatio: PRatio);
     function PrepareExtraTable(ATable: TTable; var AExtraTable: TTable; ACurBlock: integer): TTable;
 
  end;
@@ -2389,16 +2389,16 @@ begin
   ShowTable(CurTable);
 end;
 
-function TForm1.CalcNumBankruptcyExtra(ACapital, ARasxod: real; ANumDay, ANumSim, AStepDay: integer): real;
-  var i, k, y, N, Index, NumBlock, Bankruptcy : integer;
+//procedure CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
+procedure TForm1.CalcNumBankruptcyExtra(ACapital, ARasxod: real; ANumDay, ANumSim, AStepDay: integer; StartRatio: PRatio);
+  var i, k, y, N, Index, NumBlock{, Bankruptcy} : integer;
     TotalCapital, UPROPart: real;
     CurVOOPerc, CurUPROPerc: real;
     label ZeroCapital;
   begin
-    Result:= 0;
     NumBlock:= ANumDay div AStepDay;
     N:= Length(PriceData);
-    Bankruptcy:= 0;
+//    Bankruptcy:= 0;
     for i:= 0 to ANumSim - 1 do begin
       TotalCapital:= ACapital;
       for y:= NumBlock downto 1 do begin
@@ -2414,7 +2414,7 @@ function TForm1.CalcNumBankruptcyExtra(ACapital, ARasxod: real; ANumDay, ANumSim
             end;
             TotalCapital:= TotalCapital * (CurVOOPerc * VOO + UPROPart) - ARasxod;
             if TotalCapital <= 0 then begin
-              InterlockedIncrement(Bankruptcy);
+              InterlockedIncrement(StartRatio.Bankruptcy);
               TotalCapital:= 0;
               Goto ZeroCapital;
               //Break;
@@ -2423,11 +2423,12 @@ function TForm1.CalcNumBankruptcyExtra(ACapital, ARasxod: real; ANumDay, ANumSim
         end;
       end;
       ZeroCapital://
+    end;
 //      Total_EV:= Total_EV + TotalCapital;    // if need EV
 //      CurArrayReal[i]:= TotalCapital;  // 1.39
-    Result:= Bankruptcy / ANumSim;
-    //Ratio:= Bankruptcy / Total;
-    end;
+      StartRatio.Total:= StartRatio.Total + ANumSim;
+      StartRatio.FRatio:= StartRatio.Bankruptcy / StartRatio.Total;
+
   end;
 
 
@@ -2495,10 +2496,11 @@ end;
 
 begin
   StartTimer(false, Format('Correcting table for %d / %d days ...', [ACurDay, ANumDay]));
- if CheckBoxReratio.Checked then begin
-    AFinalRisk:= CalcNumBankruptcyExtra(ACapital, 1, ANumDay, NumSim, ReRatioDay);
- end else begin
   StartRatioArray:= ZeroRatioArray;
+ if CheckBoxReratio.Checked then begin
+   CalcNumBankruptcyExtra(ACapital, 1, ANumDay, NumSim, ReRatioDay, @(StartRatioArray[ARatio]));
+   AFinalRisk:= StartRatioArray[ARatio].FRatio;
+ end else begin
   N:= Length(PriceData);
   //StartTime:= Now;
  // InnerNumSim:= ANumSim div 5;
