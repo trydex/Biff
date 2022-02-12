@@ -223,7 +223,9 @@ type
     function CheckFinishedTable(ANumDay, AStepDay: integer): integer;
     function CreateExtraTable(ATable: TTable): TTable;
     function CorrectExtraTable(ATable: TTable; var AExtraTable: TTable; ACurBlock: integer): TTable;
-    procedure CalcNumBankruptcyExtra(ACapital, ARasxod: real; ANumDay, ANumSim, AStepDay: integer; StartRatio: PRatio);
+    //procedure CalcNumBankruptcyExtra(ACapital, ARasxod: real; ANumDay, ANumSim, AStepDay: integer; StartRatio: PRatio);
+    procedure CalcNumBankruptcyExtra(ACapital, ARasxod: real; ANumSim, ANumDay, ACurDay, AStepDay: integer; StartRatio: PRatio);
+
     function PrepareExtraTable(ATable: TTable; var AExtraTable: TTable; ACurBlock: integer): TTable;
 
  end;
@@ -2080,6 +2082,7 @@ end;
 function TForm1.SetTableName: string;
 var
   TotalStr: string;
+  CurReRatio: integer;
 
    procedure AddStr(PreStr, Root: string);
    begin
@@ -2099,12 +2102,18 @@ var
 begin
   GetAllParameter;
   TotalStr:= '';
-//  AddStr('N', FloatToStr(NumSim));
+  AddStr('M', Format('%d' , [Round(StartCapital)]));
   AddStr('N', Format('%d' , [NumSim]));
-  AddStr('R', Format('%.1f', [MyBankr * 100]));
+//  AddStr('R', Format('%.1f', [MyBankr * 100]));
+  AddStr('R', Format('%.2f', [MyBankr * 100]));
   AddStr('B', Format('%d' , [UPROBankr]));
   AddStr('D', Format('%d' , [TotalDay]));
   AddStr('C', Format('%d' , [StepDay]));
+  if CheckBoxReRatio.Checked then
+    CurReRatio:= ReRatioDay
+  else
+    CurReRatio:= 0;
+  AddStr('X', Format('%d' , [CurReRatio]));
   AddStr('A', Format('%d' , [NumAlgo]));
 
  // AddBool('A', Advanced);
@@ -2390,20 +2399,23 @@ begin
 end;
 
 //procedure CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
-procedure TForm1.CalcNumBankruptcyExtra(ACapital, ARasxod: real; ANumDay, ANumSim, AStepDay: integer; StartRatio: PRatio);
-  var i, k, y, N, Index, NumBlock{, Bankruptcy} : integer;
+procedure TForm1.CalcNumBankruptcyExtra(ACapital, ARasxod: real; ANumSim, ANumDay, ACurDay, AStepDay: integer; StartRatio: PRatio);
+  var i, k, y, N, Index, NumBlock, CurBlock {, Bankruptcy} : integer;
     TotalCapital, UPROPart: real;
     CurVOOPerc, CurUPROPerc: real;
     label ZeroCapital;
   begin
     NumBlock:= ANumDay div AStepDay;
+    CurBlock:= ACurDay div AStepDay;
     N:= Length(PriceData);
 //    Bankruptcy:= 0;
     for i:= 0 to ANumSim - 1 do begin
       TotalCapital:= ACapital;
       for y:= NumBlock downto 1 do begin
-        CurUPROPerc:= FindExtraTableRatio(TotalCapital, y * AStepDay, @ExtraTable) / MaxI;
-        CurVOOPerc:= 1 - CurUPROPerc;
+        if y >= CurBlock then begin
+          CurUPROPerc:= FindExtraTableRatio(TotalCapital, y * AStepDay, @ExtraTable) / MaxI;
+          CurVOOPerc:= 1 - CurUPROPerc;
+        end;
         for k:= 1 to AStepDay do begin
           Index:= Random(N);
           with PriceData[Index] do begin
@@ -2498,7 +2510,7 @@ begin
   StartTimer(false, Format('Correcting table for %d / %d days ...', [ACurDay, ANumDay]));
   StartRatioArray:= ZeroRatioArray;
  if CheckBoxReratio.Checked then begin
-   CalcNumBankruptcyExtra(ACapital, 1, ANumDay, NumSim, ReRatioDay, @(StartRatioArray[ARatio]));
+   CalcNumBankruptcyExtra(ACapital, 1, NumSim, ANumDay, ACurDay, ReRatioDay, @(StartRatioArray[ARatio]));
    AFinalRisk:= StartRatioArray[ARatio].FRatio;
  end else begin
   N:= Length(PriceData);
