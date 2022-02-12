@@ -2513,9 +2513,11 @@ begin
    CalcNumBankruptcyExtra(ACapital, 1, NumSim, ANumDay, ACurDay, ReRatioDay, @(StartRatioArray[ARatio]));
    AFinalRisk:= StartRatioArray[ARatio].FRatio;
  end else begin
+   CalcNumBankruptcyExtra(ACapital, 1, NumSim, ANumDay, ACurDay, AStepDay, @(StartRatioArray[ARatio]));
+   AFinalRisk:= StartRatioArray[ARatio].FRatio;
+ end;
+ {
   N:= Length(PriceData);
-  //StartTime:= Now;
- // InnerNumSim:= ANumSim div 5;
   CalcNumBankruptcy(NumSim, ARatio);
   with StartRatioArray[ARatio] do begin
     R0Perc:= R0 / Total;
@@ -2537,6 +2539,7 @@ begin
 //    Memo1.Lines.Add(Format('Start Percent = %f, X = %f, Y = %f ', [APercent *100, X *100, Y * 100]));
    end;
  end;
+ }
   Memo1.Lines.Add(Format('Start Percent = %f, FinalRisk = %f ', [APercent *100, AFinalRisk * 100]));
   Result:= Y;
 end;

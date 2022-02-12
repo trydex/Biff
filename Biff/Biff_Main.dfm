@@ -2,7 +2,7 @@ object Form1: TForm1
   Left = 31
   Top = 159
   BorderStyle = bsSingle
-  Caption = 'Biff v.1.52'
+  Caption = 'Biff v.1.53'
   ClientHeight = 629
   ClientWidth = 674
   Color = clBtnFace
