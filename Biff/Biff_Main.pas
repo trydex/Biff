@@ -56,8 +56,10 @@ type
   end;
 
   TFillTableThread = class(TThread)
+  private
+    StartBlock: integer;
   public
-    constructor Create();
+    constructor Create(startBlock: integer);
     procedure Execute; override;
     procedure DoTerminate; override;
   end;
@@ -211,8 +213,8 @@ type
     procedure FillAllRatio(var ARatioDayArray: TRatioDayArray; AMaxRatio: integer);
     function FindTableRatio(ACapital: real; DayLeft: integer; ATable: PTable): integer;
     function FindExtraTableRatio(ACapital: real; DayLeft: integer; ATable: PTable): integer;
-    procedure FillAllTableProcedure();
-    procedure FillAllTable(ANumDay, AStepDay: integer);
+    procedure FillAllTableProcedure(StartBlock: integer);
+    procedure FillAllTable(ANumDay, AStepDay, StartBlock: integer);
     procedure StopFillTable();
     procedure SaveTable;
     procedure LoadTable;
@@ -246,7 +248,7 @@ var
   Form1: TForm1;
   Utils: TUtils;
   Terminating : bool;
-  //DecimalSeparator : char;
+  DecimalSeparator : char;
 
 implementation
 
@@ -274,16 +276,17 @@ begin
 end;
 
 
-constructor TFillTableThread.Create();
+constructor TFillTableThread.Create(startBlock: integer);
 begin
   inherited create(false);
   Priority := tpNormal;
+  StartBlock := startBlock;
 end;
 
 procedure TFillTableThread.Execute;
 begin
   Form1.EnableControls(false);
-  Form1.FillAllTableProcedure();
+  Form1.FillAllTableProcedure(StartBlock);
 end;
 
 procedure TFillTableThread.DoTerminate;
@@ -348,7 +351,6 @@ begin
   GetAllParameter;
   if IsInflation = false then
     OpenPriceFile; // load price file only if it wasn't loaded before
-  LoadTable;
   EditUPROPer.Text := '0'; // Temporary
 
   for i:= 0 to MaxI do begin
@@ -1824,6 +1826,7 @@ end;
 procedure TForm1.ButtonFillTableClick(Sender: TObject);
 var
   Res: TModalResult;
+  StartBlock: integer;
 begin
   with FormDialog do begin
     CopyParameterFromMain;
@@ -1836,28 +1839,30 @@ begin
       GetAllParameter;
       SaveIniFile;
       Correction:= false;
-      FillTableThread := TFillTableThread.Create();
+      CopyPercentFromCurTable;
+      StartBlock:= CheckFinishedTable(TotalDay, StepDay);
+      FillTableThread := TFillTableThread.Create(StartBlock);
     end;
   end;
 end;
 
-procedure TForm1.FillAllTableProcedure();
+procedure TForm1.FillAllTableProcedure(StartBlock: integer);
 begin
   ProgressBar.Position := 0;
   CurTableFileName:= SetTableName;
   TotalSteps := 0;
   StepsThrottling := GetTickCount;
   CalculationIsRuning := true;
-  FillAllTable(TotalDay, StepDay);
+  FillAllTable(TotalDay, StepDay, StartBlock);
   CalculationIsRuning := false;
   ProgressBar.Position := ProgressBar.Max;
   SaveTable;
   SaveIniFile;
 end;
 
-procedure TForm1.FillAllTable(ANumDay, AStepDay: integer);
+procedure TForm1.FillAllTable(ANumDay, AStepDay, StartBlock: integer);
 var
-  i, k, m, NumBlock, StartBlock, StartRatio: integer;
+  i, k, m, NumBlock, StartRatio: integer;
   Percent, NewPercent, StartPercent, DiffPercent, FinalRisk, StepPercent, TargetRisk: real;
   OldPercent, OldRisk: real;
   SumaAverage: real;
@@ -1870,8 +1875,7 @@ begin
   end;
   NumBlock:= ANumDay div AStepDay;
   ProgressBar.Step := ProgressBar.Max div NumBlock;
-  CopyPercentFromCurTable ;
-  StartBlock:= CheckFinishedTable(ANumDay, AStepDay);
+  
   {
     if not IsZero(FUPROPerc) then           // Calculate StartRatio for both Biff 3 and Biff 2
       StartRatio:= Round(FUPROPerc *  MaxI)
@@ -2124,7 +2128,6 @@ var
   F: file of TRatioDayArray;
   FileStr: string;
 begin
-  //FileStr:= SetTableName;
   FileStr:= GetTableList(SetTableMask);
   if FileStr = '' then begin
     SetLength(CurTable, 0);
@@ -2234,6 +2237,7 @@ begin
 end;
 
 function TForm1.SetTableMask: string;
+{
 var
   TotalStr: string;
 
@@ -2251,24 +2255,25 @@ var
        RootStr:= '-';
      TotalStr:= TotalStr + PreStr + RootStr + '*';
    end;
-
+}
 begin
-  GetAllParameter;
-  TotalStr:= '*';
-//  AddStr('N', Format('%d' , [NumSim]));
- // AddStr('R', Format('%.1f', [MyBankr * 100]));     // 1.38
-  AddStr('B', Format('%d' , [UPROBankr]));
-//  AddStr('D', Format('%d' , [TotalDay]));
-  AddStr('C', Format('%d' , [StepDay]));
-  AddStr('A', Format('%d' , [NumAlgo]));
-
-//  AddBool('A', Advanced);
-  AddBool('E', IsInflation);
-//  TotalStr:= TotalStr + FormatDateTime('yyyy-mm-dd-hh-nn-ss', Now);
-  TotalStr:= TotalStr + '.biff';
+  //GetAllParameter;
+  //TotalStr:= '*';
+  //AddStr('N', Format('%d' , [NumSim]));
+  //AddStr('R', Format('%.1f', [MyBankr * 100]));     // 1.38
+  //AddStr('B', Format('%d' , [UPROBankr]));
+  //AddStr('D', Format('%d' , [TotalDay]));
+  //AddStr('C', Format('%d' , [StepDay]));
+  //AddStr('A', Format('%d' , [NumAlgo]));
+  //AddBool('A', Advanced);
+  //AddBool('E', IsInflation);
+  //TotalStr:= TotalStr + FormatDateTime('yyyy-mm-dd-hh-nn-ss', Now);
+  //TotalStr:= TotalStr + '.biff';
   //Memo1.Lines.Add(TotalStr);
- // StatusBar1.SimpleText:= TotalStr;
-  Result:= TotalStr;
+  //StatusBar1.SimpleText:= TotalStr;
+  //Result:= TotalStr;
+
+  Result := 'Biff*.biff';
 end;
 
 function TForm1.GetTableList(AFileMask: string): string;
