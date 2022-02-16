@@ -1,10 +1,10 @@
 object Form1: TForm1
-  Left = 31
-  Top = 159
+  Left = 39
+  Top = 132
   BorderStyle = bsSingle
-  Caption = 'Biff v.1.54'
+  Caption = 'Biff v.1.55'
   ClientHeight = 629
-  ClientWidth = 674
+  ClientWidth = 877
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -82,7 +82,7 @@ object Form1: TForm1
     Caption = 'Label9'
   end
   object Memo1: TMemo
-    Left = 224
+    Left = 424
     Top = 8
     Width = 441
     Height = 569
@@ -276,7 +276,7 @@ object Form1: TForm1
   object StatusBar1: TStatusBar
     Left = 0
     Top = 610
-    Width = 674
+    Width = 877
     Height = 19
     Panels = <
       item
@@ -322,7 +322,7 @@ object Form1: TForm1
     OnClick = RadioGroupBiffClick
   end
   object ProgressBar: TProgressBar
-    Left = 224
+    Left = 424
     Top = 576
     Width = 441
     Height = 17
@@ -354,15 +354,53 @@ object Form1: TForm1
     TabOrder = 28
     Text = '1'
   end
+  object GroupBox1: TGroupBox
+    Left = 216
+    Top = 16
+    Width = 193
+    Height = 145
+    Caption = 'St% Biff3 -> Biff2'
+    TabOrder = 29
+    object ButtonExportSt: TButton
+      Left = 24
+      Top = 24
+      Width = 145
+      Height = 25
+      Caption = 'Export St% to File'
+      TabOrder = 0
+      OnClick = ButtonExportStClick
+    end
+    object ButtonImportSt: TButton
+      Left = 24
+      Top = 64
+      Width = 145
+      Height = 25
+      Caption = 'Import St% to Biff2'
+      TabOrder = 1
+      OnClick = ButtonImportStClick
+    end
+    object ButtonFillTable2: TButton
+      Left = 24
+      Top = 104
+      Width = 145
+      Height = 25
+      Caption = 'Fill Table Biff2'
+      TabOrder = 2
+    end
+  end
   object OpenDialog1: TOpenDialog
     Filter = 'table|*.biff'
-    Left = 288
-    Top = 16
+    Left = 488
+    Top = 24
   end
   object Timer1: TTimer
     Enabled = False
     OnTimer = Timer1Timer
-    Left = 248
-    Top = 16
+    Left = 448
+    Top = 24
+  end
+  object OpenDialog2: TOpenDialog
+    Left = 528
+    Top = 24
   end
 end

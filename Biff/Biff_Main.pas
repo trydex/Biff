@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Math, INIFiles, ComCtrls, ExtCtrls, UnitDialog, Utils;
+  Dialogs, StdCtrls, Math, INIFiles, ComCtrls, ExtCtrls, UnitDialog, Utils, StrUtils;
 
 const
   WM_UPDATE_PB = WM_USER;
@@ -118,6 +118,11 @@ type
     Label9: TLabel;
     CheckBoxReRatio: TCheckBox;
     EditReRatioDAy: TEdit;
+    GroupBox1: TGroupBox;
+    ButtonExportSt: TButton;
+    ButtonImportSt: TButton;
+    ButtonFillTable2: TButton;
+    OpenDialog2: TOpenDialog;
     procedure ButtonTestClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ButtonClearMemoClick(Sender: TObject);
@@ -140,6 +145,8 @@ type
     procedure FloatEditKeyPress(Sender: TObject; var Key: Char);
     procedure ButtonStopFillTableClick(Sender: TObject);
     procedure ButtonExtraTableClick(Sender: TObject);
+    procedure ButtonExportStClick(Sender: TObject);
+    procedure ButtonImportStClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -228,7 +235,11 @@ type
     procedure CalcNumBankruptcyExtraInternal(FirstSeed: Cardinal; AInnerNumSim, ANumDay, ACurDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
 
     function PrepareExtraTable(ATable: TTable; var AExtraTable: TTable; ACurBlock: integer): TTable;
+    procedure GetInfoFromTableName(AFileName: string);
+    procedure SaveStartPrcFile(AFileName: string);
+    procedure LoadStartPrcFile(AFileName: string);
 
+    
  end;
 
 var
@@ -537,6 +548,53 @@ begin
       AIniFile.WriteFloat('Start Percent', 'Day: ' + IntToStr((i+1) * StepDay), StartPercentArr[i] * 100);
     end;
 
+  finally
+    FreeAndNil(AIniFile);
+  end;
+end;
+
+procedure TForm1.SaveStartPrcFile(AFileName: string);
+var
+  AIniFile: INIFiles.TIniFile;
+  StPrcFileName: string;
+  i: integer;
+begin
+ // GetAllParameter;
+  SetLength(AFileName, Length(AFileName) - 4);
+  StPrcFileName:= AFileName + 'stprc';   // replace .biff to .stprc
+  //AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
+  AIniFile:= IniFiles.TIniFile.Create(StPrcFileName);
+  try
+    AIniFile.WriteInteger('Common', 'Total Day', TotalDay);
+    AIniFile.WriteInteger('Common', 'Step Day', StepDay);
+    SetLength(StartPercentArr, TotalDay div StepDay);
+    for i:= 0 to High(StartPercentArr) do begin
+      StartPercentArr[i]:= CurTAble[i].FPercent;
+      AIniFile.WriteFloat('Start Percent', 'Day: ' + IntToStr((i+1) * StepDay), StartPercentArr[i] * 100);
+    end;
+
+  finally
+    FreeAndNil(AIniFile);
+  end;
+end;
+
+procedure TForm1.LoadStartPrcFile(AFileName: string);
+var
+  AIniFile: INIFiles.TIniFile;
+ // AFileName: string;
+  i: integer;
+begin
+  //AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
+  AIniFile:= IniFiles.TIniFile.Create(AFileName);
+  try
+    EditTotalDay.Text:= AIniFile.ReadString('Common', 'Total Day', '5000');
+    EditStepDay.Text:= AIniFile.ReadString('Common', 'Step Day', '1000');
+    TotalDay:= StrToIntDef(EditTotalDay.Text, 1000);
+    StepDay:= StrToIntDef(EditStepDay.Text, 100);
+    SetLength(StartPercentArr, TotalDay div StepDay);
+    for i:= 0 to High(StartPercentArr) do begin
+      StartPercentArr[i]:= AIniFile.ReadFloat('Start Percent', 'Day: ' + IntToStr((i+1) * StepDay), (i+1)/10) / 100;
+    end;
   finally
     FreeAndNil(AIniFile);
   end;
@@ -1814,13 +1872,12 @@ begin
   ProgressBar.Step := ProgressBar.Max div NumBlock;
   CopyPercentFromCurTable ;
   StartBlock:= CheckFinishedTable(ANumDay, AStepDay);
-//  SetLength(CurTable, 0);
-//  SetLength(CurTable, NumBlock);
+  {
     if not IsZero(FUPROPerc) then           // Calculate StartRatio for both Biff 3 and Biff 2
       StartRatio:= Round(FUPROPerc *  MaxI)
     else
       StartRatio:= FindBestRatio(StartCapital, Rasxod, MyBankr, NumDay, NumSim);  // Biff 1
-
+   }
   if NumAlgo = 3 then begin
     StartTimer(true, 'Creating Table by Biff 3.0...');
     Memo1.Lines.Add(Format('Biff 1 Start Ratio:: %f ', [StartRatio * 100 / MaxI]));
@@ -1836,6 +1893,9 @@ begin
     end else begin
       DiffPercent:= 0;
     end;
+    if (StartBlock + 1) = NumBlock then begin  // new table
+      StartRatio:= FindBestRatio(StartCapital, Rasxod, MyBankr, NumDay, NumSim);  // Biff 1
+    end;  
     TargetRisk:= MyBankr * (1 - Precision / 2);
     PrepareExtraTable(CurTable, ExtraTable, StartBlock + 1);
     for i:= StartBlock {NumBlock - 2} downto 0 do begin
@@ -2024,11 +2084,12 @@ begin
       end;
     end;
 
-    if (LastDay > 0) and (LastDay < NumBlock - 1)     // not finished table exists
-       and (MessageDlg('You have not finished old table! ' +
+    if (LastDay > 0) and (LastDay < NumBlock - 1) then begin    // not finished table exists
+      if (MessageDlg('You have not finished old table! ' +
        'Do you want continue filling old table?', mtCustom, [mbYes, mbNo], 0) = mrYes) then begin
          Result:= LastDay;
          Exit;
+       end;
     end;
   end;
   SetLength(CurTable, 0);
@@ -2128,6 +2189,48 @@ begin
   //Memo1.Lines.Add(TotalStr);
   //StatusBar1.SimpleText:= TotalStr;
   Result:= TotalStr;
+end;
+
+procedure TForm1.GetInfoFromTableName(AFileName: string);
+var
+  CurReratio, InflationStr: string;
+  ScanPos: integer;
+
+   function GetStr(PreStr: string): string;
+   var
+     StartPos, EndPos: integer;
+   begin
+     StartPos:= PosEx(PreStr, AFileName, ScanPos);
+     EndPos:= PosEx('_', AFileName, StartPos);
+     Result:= Copy(AFileName, StartPos + 1, EndPos - StartPos - 1);
+   end;
+
+begin
+  ScanPos:= Length(ExtractFilePath(ParamStr(0))) + Length(Version) + 1;
+  EditCapital.Text:= GetStr('M');
+  EditRasxod.Text:= '1';
+  EditDays.Text:= GetStr('D');
+  EditSims.Text:= GetStr('N');
+  EditMyBankr.Text:= GetStr('R');
+  EditUPROBankr.Text:= GetStr('B');
+  EditTotalDay.Text:= GetStr('D');
+  EditStepDay.Text:= GetStr('C');
+  EditTotalDay.Text:= GetStr('D');
+  CurReratio:= GetStr('X');
+  if CurReratio = '0' then
+    CheckBoxReRatio.Checked:= false
+  else
+    CheckBoxReRatio.Checked:= true;
+  EditReRatioDay.Text:= CurReRatio; // GetStr('X');
+  CheckBoxInflation.Checked;
+  InflationStr:= GetStr('E');
+  if InflationStr = '+' then
+    CheckBoxInflation.Checked:= true
+  else
+    CheckBoxInflation.Checked:= false;
+  RadioGroupBiff.ItemIndex:= StrToInt(GetStr('A'));
+ // EditUPROPer.Text:= '';
+  GetAllParameter;
 end;
 
 function TForm1.SetTableMask: string;
@@ -2235,7 +2338,6 @@ end;
 
 procedure TForm1.Button3Click(Sender: TObject);
 begin
-//  GetTableList(SetTableMask);
   LoadTable;
 end;
 
@@ -2871,6 +2973,39 @@ end;
 procedure TForm1.ButtonExtraTableClick(Sender: TObject);
 begin
   CurTable:= CreateExtraTable(CurTAble);
+end;
+
+procedure TForm1.ButtonExportStClick(Sender: TObject);
+begin
+  with OpenDialog2 do begin
+    InitialDir:= ExtractFilePath(ParamStr(0));
+    //Filter:= 'Table | ' + SetTableMask;
+    Filter:= 'Table | ' + '*A3*.biff';
+    if Execute then begin
+        Memo1.Lines.Add(FileName);
+        CurTableFileName:= FileName;
+        GetInfoFromTableName(FileName);
+        LoadTable;
+        SaveStartPrcFile(FileName);
+    end;
+  end;
+end;
+
+
+procedure TForm1.ButtonImportStClick(Sender: TObject);
+begin
+  with OpenDialog2 do begin
+    InitialDir:= ExtractFilePath(ParamStr(0));
+    //Filter:= 'Start Percent | ' + SetTableMask;
+    Filter:= 'Start Percent | ' + '*A3*.stprc';
+    if Execute then begin
+        Memo1.Lines.Add(FileName);
+        //CurTableFileName:= FileName;
+        GetInfoFromTableName(FileName);
+        //LoadTable;
+        LoadStartPrcFile(FileName);
+    end;
+  end;
 end;
 
 end.
