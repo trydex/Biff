@@ -280,7 +280,7 @@ constructor TFillTableThread.Create(startBlock: integer);
 begin
   inherited create(false);
   Priority := tpNormal;
-  StartBlock := startBlock;
+  self.StartBlock := startBlock;
 end;
 
 procedure TFillTableThread.Execute;
