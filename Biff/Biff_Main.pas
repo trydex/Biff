@@ -248,7 +248,7 @@ var
   Form1: TForm1;
   Utils: TUtils;
   Terminating : bool;
-  DecimalSeparator : char;
+  //DecimalSeparator : char;
 
 implementation
 
