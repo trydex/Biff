@@ -351,6 +351,7 @@ begin
   GetAllParameter;
   if IsInflation = false then
     OpenPriceFile; // load price file only if it wasn't loaded before
+  //LoadTable; // uncomment to auto-load a table on start
   EditUPROPer.Text := '0'; // Temporary
 
   for i:= 0 to MaxI do begin
