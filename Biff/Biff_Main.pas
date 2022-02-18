@@ -149,6 +149,7 @@ type
     procedure ButtonExtraTableClick(Sender: TObject);
     procedure ButtonExportStClick(Sender: TObject);
     procedure ButtonImportStClick(Sender: TObject);
+    procedure ButtonFillTable2Click(Sender: TObject);
 
   private
     { Private declarations }
@@ -185,6 +186,7 @@ type
     CurTable: TTable;  //array of TRatioDayArray;
     ExtraTable: TTable; 
     CurTableFileName: string;
+    StartPrcFileName: string;
     StartTimeTimer: TDateTime;
     LogFileName: string;
     Precision: real;   // need for Biff3 Fill Table
@@ -483,6 +485,8 @@ begin
   try
     Form1.Left:= AIniFile.ReadInteger('Common', 'Left', Form1.Left);
     Form1.Top:= AIniFile.ReadInteger('Common', 'Top', Form1.Top);
+    Form1.Width:= AIniFile.ReadInteger('Common', 'Width', Form1.Left);
+    Form1.Height:= AIniFile.ReadInteger('Common', 'Height', Form1.Left);
 
     EditCapital.Text:= AIniFile.ReadString('Common', 'Initial Money', '100000');
     EditRasxod.Text:= AIniFile.ReadString('Common', 'Daily Expenses', '1');
@@ -502,13 +506,17 @@ begin
     CurTableFileName:= AIniFile.ReadString('Common', 'Table File Name', '');
     RadioGroupBiff.ItemIndex:= AIniFile.ReadInteger('Common', 'Num Algo', RadioGroupBiff.ItemIndex);
     Precision:= AIniFile.ReadFloat('Common', 'Precision %', 1) / 100;
-    ManualStartPercentOn:= AIniFile.ReadBool('Start Percent', 'ManualStartPercentOn', false);
+    //ManualStartPercentOn:= AIniFile.ReadBool('Common', 'ManualStartPercentOn', false);
+    ManualStartPercentOn:= false;
+    SetLength(StartPercentArr, 0);
+{
     TotalDay:= StrToIntDef(EditTotalDay.Text, 1000);
     StepDay:= StrToIntDef(EditStepDay.Text, 100);
     SetLength(StartPercentArr, TotalDay div StepDay);
     for i:= 0 to High(StartPercentArr) do begin
       StartPercentArr[i]:= AIniFile.ReadFloat('Start Percent', 'Day: ' + IntToStr((i+1) * StepDay), (i+1)/10) / 100;
     end;
+    }
   finally
     FreeAndNil(AIniFile);
   end;
@@ -526,6 +534,9 @@ begin
   try
     AIniFile.WriteInteger('Common', 'Left', Form1.Left);
     AIniFile.WriteInteger('Common', 'Top', Form1.Top);
+    AIniFile.WriteInteger('Common', 'Width', Form1.Width);
+    AIniFile.WriteInteger('Common', 'Height', Form1.Height);
+
 
     AIniFile.WriteFloat('Common', 'Initial Money', StartCapital);
     AIniFile.WriteFloat('Common', 'Daily Expenses', Rasxod);
@@ -545,12 +556,13 @@ begin
     AIniFile.WriteString('Common', 'Table File Name', CurTableFileName);
     AIniFile.WriteInteger('Common', 'Num Algo', RadioGroupBiff.ItemIndex);
     AIniFile.WriteFloat('Common', 'Precision %', Precision * 100);
-    AIniFile.WriteBool('Start Percent', 'ManualStartPercentOn', ManualStartPercentOn);
-
+    AIniFile.WriteBool('Common', 'ManualStartPercentOn', ManualStartPercentOn);
+    AIniFile.EraseSection('Start Percent');
+    {
     for i:= 0 to High(StartPercentArr) do begin
       AIniFile.WriteFloat('Start Percent', 'Day: ' + IntToStr((i+1) * StepDay), StartPercentArr[i] * 100);
     end;
-
+     }
   finally
     FreeAndNil(AIniFile);
   end;
@@ -559,14 +571,14 @@ end;
 procedure TForm1.SaveStartPrcFile(AFileName: string);
 var
   AIniFile: INIFiles.TIniFile;
-  StPrcFileName: string;
+  //StartPrcFileName: string;
   i: integer;
 begin
- // GetAllParameter;
+  GetAllParameter;
   SetLength(AFileName, Length(AFileName) - 4);
-  StPrcFileName:= AFileName + 'stprc';   // replace .biff to .stprc
+  StartPrcFileName:= AFileName + 'stprc';   // replace .biff to .stprc
   //AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
-  AIniFile:= IniFiles.TIniFile.Create(StPrcFileName);
+  AIniFile:= IniFiles.TIniFile.Create(StartPrcFileName);
   try
     AIniFile.WriteInteger('Common', 'Total Day', TotalDay);
     AIniFile.WriteInteger('Common', 'Step Day', StepDay);
@@ -2210,7 +2222,8 @@ var
    end;
 
 begin
-  ScanPos:= Length(ExtractFilePath(ParamStr(0))) + Length(Version) + 1;
+  //ScanPos:= Length(ExtractFilePath(ParamStr(0))) + Length(Version) + 1;
+  ScanPos:= Pos('Biff v', AFileName) + 4;
   EditCapital.Text:= GetStr('M');
   EditRasxod.Text:= '1';
   EditDays.Text:= GetStr('D');
@@ -2237,8 +2250,9 @@ begin
   GetAllParameter;
 end;
 
+  {
 function TForm1.SetTableMask: string;
-{
+
 var
   TotalStr: string;
 
@@ -2256,24 +2270,26 @@ var
        RootStr:= '-';
      TotalStr:= TotalStr + PreStr + RootStr + '*';
    end;
-}
+
 begin
-  //GetAllParameter;
-  //TotalStr:= '*';
+  GetAllParameter;
+  TotalStr:= '*';
   //AddStr('N', Format('%d' , [NumSim]));
   //AddStr('R', Format('%.1f', [MyBankr * 100]));     // 1.38
-  //AddStr('B', Format('%d' , [UPROBankr]));
+  AddStr('B', Format('%d' , [UPROBankr]));
   //AddStr('D', Format('%d' , [TotalDay]));
-  //AddStr('C', Format('%d' , [StepDay]));
-  //AddStr('A', Format('%d' , [NumAlgo]));
-  //AddBool('A', Advanced);
-  //AddBool('E', IsInflation);
-  //TotalStr:= TotalStr + FormatDateTime('yyyy-mm-dd-hh-nn-ss', Now);
-  //TotalStr:= TotalStr + '.biff';
+  AddStr('C', Format('%d' , [StepDay]));
+  AddStr('A', Format('%d' , [NumAlgo]));
+  AddBool('E', IsInflation);
+  TotalStr:= TotalStr + '.biff';
   //Memo1.Lines.Add(TotalStr);
-  //StatusBar1.SimpleText:= TotalStr;
-  //Result:= TotalStr;
+  StatusBar1.SimpleText:= TotalStr;
+  Result:= TotalStr;
+end;
+ }
 
+function TForm1.SetTableMask: string;
+begin
   Result := 'Biff*.biff';
 end;
 
@@ -2333,11 +2349,11 @@ begin
     InitialDir:= ExtractFilePath(ParamStr(0));
     Filter:= 'Table | ' + SetTableMask;
     if Execute then begin
-     // for i:= 0 to Length(Files) do begin
         Memo1.Lines.Add(FileName);
         CurTableFileName:= FileName;
+        GetInfoFromTableName(FileName);
         LoadTable;
-      //end;
+        SetLength(StartPercentArr, 0);
     end;
   end;
 end;
@@ -2831,10 +2847,12 @@ var
   StepPercent: real;
 begin
   NumBlock:= NumDay div StepDay;
-  if FormDialog.CheckBoxUseCurTable.Checked then begin
-    SetLength(StartPercentArr, Length(CurTable));
-    for i:= 0 to High(StartPercentArr) do begin
-      StartPercentArr[i]:= CurTAble[i].FPercent;
+  if FormDialog.CheckBoxUseCurTable.Checked then begin  // New in 1.56
+    if Length(StartPercentArr) = 0 then begin
+      SetLength(StartPercentArr, Length(CurTable));
+      for i:= 0 to High(StartPercentArr) do begin
+        StartPercentArr[i]:= CurTAble[i].FPercent;
+      end;
     end;
   end else begin
     if not ManualStartPercentOn then begin
@@ -3005,14 +3023,44 @@ begin
     //Filter:= 'Start Percent | ' + SetTableMask;
     Filter:= 'Start Percent | ' + '*A3*.stprc';
     if Execute then begin
-        Memo1.Lines.Add(FileName);
-        //CurTableFileName:= FileName;
+        Memo1.Lines.Add('Import Start Percent from ' + FileName);
         GetInfoFromTableName(FileName);
-        //LoadTable;
+        StartPrcFileName:= FileName;
         LoadStartPrcFile(FileName);
+        CurTableFileName:= FileName;
+        SetLength(CurTableFileName, Length(CurTableFileName) - 5);
+        CurTableFileName:= CurTableFileName + 'biff';
+        LoadTable;
+    end;
+  end;
+end;
+
+procedure TForm1.ButtonFillTable2Click(Sender: TObject);
+var StartBlock: integer;
+begin
+  if Length(StartPercentArr) = 0 then begin
+    ShowMessage('Load Start Percents first');
+  end else begin
+    GetInfoFromTableName(StartPrcFileName);
+    LoadStartPrcFile(StartPrcFileName);
+    CurTableFileName:= StartPrcFileName;
+    SetLength(CurTableFileName, Length(CurTableFileName) - 5);
+    CurTableFileName:= CurTableFileName + 'biff';
+    LoadTable;
+    if (MessageDlg('Do you wish to start filling Biff2 table with St% from Biff3 on current setup?',
+         mtConfirmation, [mbYes, mbNo], 0) = mrYes) then begin
+      NumAlgo:= 2;
+      RadioGroupBiff.ItemIndex:= 2;
+      FormDialog.CheckBoxUseCurTable.Checked:= true;
+
+      GetAllParameter;
+      SaveIniFile;
+      Correction:= false;
+      CopyPercentFromCurTable;
+      StartBlock:= CheckFinishedTable(TotalDay, StepDay);
+      FillTableThread := TFillTableThread.Create(StartBlock);
     end;
   end;
 end;
 
 end.
-

@@ -1,10 +1,9 @@
 object Form1: TForm1
   Left = 39
   Top = 132
-  BorderStyle = bsSingle
-  Caption = 'Biff v.1.55'
-  ClientHeight = 629
-  ClientWidth = 877
+  Width = 893
+  Height = 667
+  Caption = 'Biff v.1.57'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -386,6 +385,7 @@ object Form1: TForm1
       Height = 25
       Caption = 'Fill Table Biff2'
       TabOrder = 2
+      OnClick = ButtonFillTable2Click
     end
   end
   object OpenDialog1: TOpenDialog
