@@ -1,6 +1,6 @@
 object FormDialog: TFormDialog
   Left = 609
-  Top = 176
+  Top = 196
   BorderStyle = bsDialog
   Caption = 'Fill Table'
   ClientHeight = 395

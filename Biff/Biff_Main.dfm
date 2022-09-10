@@ -1,9 +1,9 @@
 object Form1: TForm1
-  Left = 39
-  Top = 132
+  Left = 224
+  Top = 85
   Width = 893
   Height = 667
-  Caption = 'Biff v.1.57'
+  Caption = 'Biff v.2.01'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -387,6 +387,19 @@ object Form1: TForm1
       TabOrder = 2
       OnClick = ButtonFillTable2Click
     end
+  end
+  object RadioGroupSimMethod: TRadioGroup
+    Left = 216
+    Top = 176
+    Width = 193
+    Height = 73
+    Caption = 'Simulation Method'
+    ItemIndex = 1
+    Items.Strings = (
+      'Random'
+      '12-Day Volatility')
+    TabOrder = 30
+    OnClick = RadioGroupBiffClick
   end
   object OpenDialog1: TOpenDialog
     Filter = 'table|*.biff'

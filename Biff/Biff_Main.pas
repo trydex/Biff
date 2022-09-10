@@ -15,7 +15,10 @@ type
     PriceDate: TDateTime;
     VOO: real;
     UPRO: real;
+    Vol: real;  // Volatility ÐÂÖÒ
   end;
+  TArrPriceData = array of TPriceData;
+
   TRatio = record
     VOOPerc, UPROPerc: real;   // 0.00, 0.01, ..0.99, 1.00
     Total, Bankruptcy: integer;
@@ -45,9 +48,15 @@ type
 
   TCaclBankruptcyAlgo = (AlgoSimple, AlgoAdvanced, AlgoExtra);
 
-
   TArrayReal = array of real;    // for sort array of Total_EV
 
+const
+  GroupVol: array[0..22] of real =
+   (0.00268444417, 0.00314709083, 0.0035062525, 0.0038021225, 0.0040878625, 0.0043652625, 0.00464857167,
+    0.00494001333, 0.005232215, 0.00550140167, 0.005775275, 0.00607376, 0.00642635167, 0.00683055, 0.0072788175,
+    0.0077491975, 0.00835090583, 0.0091001775, 0.01011414667, 0.01150477083, 0.0135928075, 0.01802705333, 1);
+
+type    
   TBestRatioThread = class(TThread)
   public
     constructor Create();
@@ -125,6 +134,7 @@ type
     ButtonImportSt: TButton;
     ButtonFillTable2: TButton;
     OpenDialog2: TOpenDialog;
+    RadioGroupSimMethod: TRadioGroup;
     procedure ButtonTestClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ButtonClearMemoClick(Sender: TObject);
@@ -167,7 +177,10 @@ type
   public
     { Public declarations }
 
-    PriceData: array of TPriceData;
+    //PriceData: array of TPriceData;
+    PriceData: TArrPriceData;
+    PriceData2Dim: array of TArrPriceData;
+    ArrPriceData: TArrPriceData;   // Create PriceData for NumDay (starting from Index 1)
     StartCapital: real;
     Rasxod: real;
     NumDay: integer;
@@ -194,6 +207,8 @@ type
     ManualStartPercentOn: boolean;
 
     procedure OpenPriceFile;
+    procedure OpenPriceFileByName(var APriceData: TArrPriceData; AFileName: string);
+    function GetDirectoryName(NumGroup: integer): string;
     procedure GetAllParameter;
     procedure LoadIniFile;
     procedure SaveIniFile;
@@ -242,6 +257,7 @@ type
     procedure GetInfoFromTableName(AFileName: string);
     procedure SaveStartPrcFile(AFileName: string);
     procedure LoadStartPrcFile(AFileName: string);
+    procedure CreatePriceDataArray(ANumDay: integer);
 
     
  end;
@@ -410,6 +426,58 @@ begin
 end;
 
 procedure TForm1.OpenPriceFile;
+var i, Suma: integer;
+begin
+  OpenPriceFileByName(PriceData, '');
+  SetLength(PriceData2Dim, 23);
+  for i:= 0 to High(PriceData2Dim) do begin
+    OpenPriceFileByName(PriceData2Dim[i], GetDirectoryName(i + 1));
+  end;
+  {
+  for i:= 0 to High(PriceData2Dim) do begin
+    Memo1.Lines.Add(Format('Length Group %d : %d ', [i+1, Length(PriceData2Dim[i])]));
+    Suma:= Suma + Length(PriceData2Dim[i]);
+  end;
+  Memo1.Lines.Add(Format('Suma = %d ', [Suma]));
+  }
+end;
+
+function TForm1.GetDirectoryName(NumGroup: integer): string;
+var
+  SR: TSearchRec;
+  FindRes: integer;
+  SL: TStringList;
+  AFileMask, FileStr, FileRootStr: string;
+begin
+  SL:= TStringList.Create;
+  try
+    try
+      AFileMask:= IntToStr(NumGroup) + ')*';
+      FileRootStr:= ExtractFilePath(ParamStr(0)) + '\Prices\';
+      FindRes:= FindFirst(FileRootStr + AFileMask, faAnyFile, SR);
+      while FindRes = 0 do begin
+        SR.Name:= FileRootStr + SR.Name ;
+        SL.Add(SR.Name);
+        FindRes:= FindNext(SR);
+      end;
+    finally
+      FindClose(SR);
+    end;
+    if SL.Count = 1 then begin
+      FileStr:= SL[0];
+    end else begin
+      ShowMessage('Directory for group ' + IntToStr(NumGroup) + 'not finded.');
+      FileStr:= '';
+    end;
+  finally
+    FreeAndNil(SL);
+  end;
+  Result:= FileStr + '\';
+end;
+
+
+  {
+procedure TForm1.OpenPriceFile;
 var
   i: integer;
   S, CurStr, PriceFileName: string;
@@ -427,6 +495,9 @@ var
   end;
 
 begin
+  OpenPriceFileByName(PriceData, '');
+  Exit;
+
   if IsInflation then
     PriceFileName:= 'price_i.txt'
   else
@@ -453,6 +524,96 @@ begin
  except
    Memo1.Lines.Add('File ' + PriceFileName + ' not found.')
  end;
+end;
+   }
+procedure TForm1.OpenPriceFileByName(var APriceData: TArrPriceData; AFileName: string);
+var
+  i: integer;
+  S, CurStr, PriceFileName: string;
+
+  function GetFirstString(var FullStr: string): string;
+  var PosSpace: integer;
+  begin
+    PosSpace:= Pos(#9, FullStr);   // Tab symbol
+    if PosSpace > 0 then begin
+      Result:= Copy(FullStr, 1, PosSpace - 1);
+      Delete(FullStr, 1, PosSpace);
+    end else
+      Result:= FullStr;
+    if Length(Result) < 1 then
+  end;
+
+begin
+  if IsInflation then
+    PriceFileName:= AFileName + 'price_i.txt'
+  else
+    PriceFileName:= AFileName + 'price_new.txt';
+ try
+  Memo1.Lines.Clear;
+  Memo1.Lines.LoadFromFile(PriceFileName);
+  SetLength(APriceData, Memo1.Lines.Count);
+
+  for i:= 0 to Memo1.Lines.Count - 1 do begin
+    with APriceData[i] do begin
+      S:= Memo1.Lines[i];
+      CurStr:= GetFirstString(S);
+      PriceDate:= Utils.StrToDateEx(CurStr);
+      CurStr:= GetFirstString(S);
+      VOO:= StrToFloat(CurStr);
+      CurStr:= GetFirstString(S);
+      UPRO:= StrToFloat(CurStr);
+      Vol:= Abs(VOO - 1.0006825);
+    end;
+  end;
+  Memo1.Lines.Clear;
+  StatusBar1.Panels[1].Text:= 'Downloaded Price File: ' + PriceFileName;
+  Memo1.Lines.Add('Downloaded Price File: ' + PriceFileName);
+ except
+   Memo1.Lines.Add('File ' + PriceFileName + ' not found.')
+ end;
+end;
+
+procedure TForm1.CreatePriceDataArray(ANumDay: integer);
+var i, N,  NumGroup, Index: integer;
+  SumaVol: real;
+
+  function FindNumGroup(ToFind: real): integer;
+  var
+    N, First, Last, Mid: integer;
+  begin
+    First:= 0;  Last:= 22;
+    while First < Last do begin
+      Mid:= (First + Last) div 2;
+      if GroupVol[Mid] < ToFind then
+        First:= Mid + 1
+      else
+        Last:= Mid ;
+    end;
+    Result:= First;  // or Last
+  end;
+
+begin
+  SetLength(ArrPriceData, ANumDay + 1);   // not use 0-index of array
+  N:= Length(PriceData);
+  if RadioGroupSimMethod.ItemIndex = 0 then begin   // Random
+    for i:= 1 to ANumDay do begin
+      ArrPriceData[i]:= PriceData[Random(N)];
+    end;
+  end else begin                                   // 12-Day Volatility
+    SumaVol:= 0;
+    for i:= 1 to 12 do begin
+      Index:= Random(Length(PriceData));
+      ArrPriceData[i]:= PriceData[Index];
+      SumaVol:= SumaVol + ArrPriceData[i].Vol;
+    end;
+    for i:= 13 to ANumDay do begin
+      NumGroup:= FindNumGroup(SumaVol / 12);
+      Index:= Random(Length(PriceData2Dim[NumGroup]));
+      ArrPriceData[i]:= PriceData2Dim[NumGroup][Index];
+      SumaVol:= SumaVol - ArrPriceData[i - 12].Vol + ArrPriceData[i].Vol;
+    end;
+
+  end;
 end;
 
 procedure TForm1.GetAllParameter;
@@ -702,6 +863,11 @@ var i, k, N, Index, UPROBankrot: integer;
 begin
   Memo1.Lines.Add('');
   StartTimer(true, 'Calculating simple EV  ...');
+  if RadioGroupSimMethod.ItemIndex = 0 then begin
+    Memo1.Lines.Add('Simulation Method - Random');
+  end else begin
+    Memo1.Lines.Add('Simulation Method - 12-Day Volatility');
+  end;
   N:= Length(PriceData);
   UPROPer:= (StrToFloatDef(EditUPROPer.Text, 100)) / 100;
   VOOPer:= 1 - UPROPer;
@@ -722,9 +888,11 @@ begin
     VOOCapital:= StartVOO;
     UPROCapital:= StartUPRO;
     TotalCapital:= StartCapital;
+    CreatePriceDataArray(NumDay);
     for k:= 1 to NumDay do begin
-      Index:= Random(N);
-      with PriceData[Index] do begin
+      //Index:= Random(N);
+      //with PriceData[Index] do begin
+      with ArrPriceData[k] do begin
        if CanRebalance then begin
         VOOCapital:= VOOCapital * VOO;
         VOOCapital:= VOOCapital - RasxodVOO;
@@ -1070,7 +1238,37 @@ asm
     MOV     EAX,EDX
     POP     EBX
 end;
+begin    // new version from 2.01
+  priceDataLength:= Length(PriceData);
+  RandSeed := FirstSeed;
 
+  for i:= 1 to ANumSim do begin
+    TotalCapital:= ACapital;
+    CreatePriceDataArray(ANumDay);
+    for k:= 1 to ANumDay do begin
+      if Terminating then
+        Exit;
+      //index := MyRandInt(priceDataLength);
+      //with PriceData[index] do begin
+      //with ArrPriceData[k] do begin
+        UPROPart:= StartRatio.UPROPerc * ArrPriceData[k].UPRO;
+        if IsBankruptcy then begin
+          if MyRandInt(UPROBankr) = 0 then
+            UPROPart:= 0;
+        end;
+
+        TotalCapital:= TotalCapital * (StartRatio.VOOPerc * ArrPriceData[k].VOO + UPROPart) - ARasxod;
+        if TotalCapital <= 0 then begin
+          InterlockedIncrement(StartRatio.Bankruptcy);
+          TotalCapital:= 0;
+          Break;
+        end;
+      //end;
+    end;
+  end;
+end;
+
+ {   // old version before 2.01
 begin
   priceDataLength:= Length(PriceData);
   RandSeed := FirstSeed;
@@ -1096,6 +1294,7 @@ begin
     end;
   end;
 end;
+  }
 
 function TForm1.FindBestRatio(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
 var
