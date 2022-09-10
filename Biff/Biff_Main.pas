@@ -15,7 +15,7 @@ type
     PriceDate: TDateTime;
     VOO: real;
     UPRO: real;
-    Vol: real;  // Volatility ÐÂÖÒ
+    Vol: real;  // Volatility
   end;
   TArrPriceData = array of TPriceData;
 
@@ -45,6 +45,7 @@ type
 
   TTable = array of TRatioDayArray;
   PTable = ^TTable;
+  PCardinal = ^Cardinal;
 
   TCaclBankruptcyAlgo = (AlgoSimple, AlgoAdvanced, AlgoExtra);
 
@@ -180,7 +181,7 @@ type
     //PriceData: array of TPriceData;
     PriceData: TArrPriceData;
     PriceData2Dim: array of TArrPriceData;
-    ArrPriceData: TArrPriceData;   // Create PriceData for NumDay (starting from Index 1)
+    //ArrPriceData: TArrPriceData;   // Create PriceData for NumDay (starting from Index 1)
     StartCapital: real;
     Rasxod: real;
     NumDay: integer;
@@ -257,7 +258,7 @@ type
     procedure GetInfoFromTableName(AFileName: string);
     procedure SaveStartPrcFile(AFileName: string);
     procedure LoadStartPrcFile(AFileName: string);
-    procedure CreatePriceDataArray(ANumDay: integer);
+    function CreatePriceDataArray(ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
 
     
  end;
@@ -573,9 +574,23 @@ begin
  end;
 end;
 
-procedure TForm1.CreatePriceDataArray(ANumDay: integer);
+function TForm1.CreatePriceDataArray(ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
 var i, N,  NumGroup, Index: integer;
   SumaVol: real;
+  RandSeed: Cardinal;
+  ArrPriceData: TArrPriceData;
+
+  function MyRandInt(Range: integer) : integer;
+  asm
+      PUSH    EBX
+      XOR     EBX, EBX
+      IMUL    EDX,[EBX].RandSeed,08088405H
+      INC     EDX
+      MOV     [EBX].RandSeed,EDX
+      MUL     EDX
+      MOV     EAX,EDX
+      POP     EBX
+  end;
 
   function FindNumGroup(ToFind: real): integer;
   var
@@ -593,27 +608,30 @@ var i, N,  NumGroup, Index: integer;
   end;
 
 begin
+  RandSeed := FirstSeed^;
   SetLength(ArrPriceData, ANumDay + 1);   // not use 0-index of array
   N:= Length(PriceData);
   if RadioGroupSimMethod.ItemIndex = 0 then begin   // Random
     for i:= 1 to ANumDay do begin
-      ArrPriceData[i]:= PriceData[Random(N)];
+      ArrPriceData[i]:= PriceData[MyRandInt(N)];
     end;
   end else begin                                   // 12-Day Volatility
     SumaVol:= 0;
     for i:= 1 to 12 do begin
-      Index:= Random(Length(PriceData));
+      Index:= MyRandInt(Length(PriceData));
       ArrPriceData[i]:= PriceData[Index];
       SumaVol:= SumaVol + ArrPriceData[i].Vol;
     end;
     for i:= 13 to ANumDay do begin
       NumGroup:= FindNumGroup(SumaVol / 12);
-      Index:= Random(Length(PriceData2Dim[NumGroup]));
+      Index:= MyRandInt(Length(PriceData2Dim[NumGroup]));
       ArrPriceData[i]:= PriceData2Dim[NumGroup][Index];
       SumaVol:= SumaVol - ArrPriceData[i - 12].Vol + ArrPriceData[i].Vol;
     end;
-
   end;
+
+  FirstSeed^ := RandSeed;
+  Result := ArrPriceData; 
 end;
 
 procedure TForm1.GetAllParameter;
@@ -859,6 +877,8 @@ var i, k, N, Index, UPROBankrot: integer;
   CanRebalance: boolean;
   CurArrayReal: TArrayReal;  // 1.39
   CurPercentile: real;
+  Seed: Cardinal;
+  ArrPriceData: TArrPriceData;
 
 begin
   Memo1.Lines.Add('');
@@ -873,6 +893,7 @@ begin
   VOOPer:= 1 - UPROPer;
   RePerc:= (StrToFloatDef(EditREPerc.Text, 2)) / 100;
   CanRebalance:= CheckBoxRebalance.Checked;
+  Seed := GetTickCount;
 
   if IsZero(RePerc) then
     CanRebalance:= false;
@@ -888,7 +909,7 @@ begin
     VOOCapital:= StartVOO;
     UPROCapital:= StartUPRO;
     TotalCapital:= StartCapital;
-    CreatePriceDataArray(NumDay);
+    ArrPriceData := CreatePriceDataArray(NumDay, @Seed);
     for k:= 1 to NumDay do begin
       //Index:= Random(N);
       //with PriceData[Index] do begin
@@ -1173,7 +1194,6 @@ end;
 
 procedure TForm1.CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
 var t, threadLimit, stepsThread: integer;
-    //stepsAdditional: integer;
     c1, c2, f: Int64;
     //time: string; // uncomment for debug to track time
     handles: array of THandle;
@@ -1202,9 +1222,8 @@ begin
   Finalize(CaclBankruptcyThreads);
   SetLength(CaclBankruptcyThreads, 0);
 
-  // Perform additional steps that have left. stepsAdditional is always less then stepsThread (one full iteration for each thread.)
-  //if stepsAdditional > 0 then
-  //  CalcNumBankruptcySimpleInternal(CurrentTicks, stepsAdditional, ACurRatio, ANumDay, ACapital, ARasxod, StartRatioArray[ACurRatio]);
+  // Single thread.
+  //CalcNumBankruptcySimpleInternal(CurrentTicks, ANumSim, ANumDay, ACapital, ARasxod, StartRatio);
 
   with StartRatio^ do begin
     Total:= Total + ANumSim {stepsThread};
@@ -1225,7 +1244,8 @@ end;
 procedure TForm1.CalcNumBankruptcySimpleInternal(FirstSeed: Cardinal; ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
 var i, k, index, priceDataLength : integer;
   TotalCapital, UPROPart: real;
-  RandSeed: Cardinal;
+  RandSeed,RandSeed2: Cardinal;
+  ArrPriceData: TArrPriceData;
 
 function MyRandInt(Range: integer) : integer;
 asm
@@ -1244,7 +1264,7 @@ begin    // new version from 2.01
 
   for i:= 1 to ANumSim do begin
     TotalCapital:= ACapital;
-    CreatePriceDataArray(ANumDay);
+    ArrPriceData := CreatePriceDataArray(ANumDay, @RandSeed);
     for k:= 1 to ANumDay do begin
       if Terminating then
         Exit;
