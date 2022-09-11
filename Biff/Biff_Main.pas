@@ -136,6 +136,7 @@ type
     ButtonFillTable2: TButton;
     OpenDialog2: TOpenDialog;
     RadioGroupSimMethod: TRadioGroup;
+    CheckBoxAllGroup: TCheckBox;
     procedure ButtonTestClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ButtonClearMemoClick(Sender: TObject);
@@ -206,6 +207,7 @@ type
     Precision: real;   // need for Biff3 Fill Table
     StartPercentArr: array of real;
     ManualStartPercentOn: boolean;
+    VolGroup: integer;     // temporally
 
     procedure OpenPriceFile;
     procedure OpenPriceFileByName(var APriceData: TArrPriceData; AFileName: string);
@@ -618,16 +620,28 @@ begin
   end else begin                                   // 12-Day Volatility
     SumaVol:= 0;
     for i:= 1 to 12 do begin
-      Index:= MyRandInt(Length(PriceData));
+      Index:= MyRandInt(N);
       ArrPriceData[i]:= PriceData[Index];
       SumaVol:= SumaVol + ArrPriceData[i].Vol;
     end;
+
+   if VolGroup >=0 then begin
+    NumGroup:= VolGroup; //FindNumGroup(SumaVol / 12);
+    N:= Length(PriceData2Dim[NumGroup]);
+    for i:= 13 to ANumDay do begin
+      Index:= MyRandInt(N);
+      ArrPriceData[i]:= PriceData2Dim[NumGroup][Index];
+      SumaVol:= SumaVol - ArrPriceData[i - 12].Vol + ArrPriceData[i].Vol;
+    end;
+
+   end else begin
     for i:= 13 to ANumDay do begin
       NumGroup:= FindNumGroup(SumaVol / 12);
       Index:= MyRandInt(Length(PriceData2Dim[NumGroup]));
       ArrPriceData[i]:= PriceData2Dim[NumGroup][Index];
       SumaVol:= SumaVol - ArrPriceData[i - 12].Vol + ArrPriceData[i].Vol;
     end;
+   end; 
   end;
 
   FirstSeed^ := RandSeed;
@@ -1700,7 +1714,7 @@ end;
 
 procedure TForm1.FindBestRatioProcedure();
 var
-  BestRatio: integer;
+  i, BestRatio: integer;
 begin
   GetAllParameter;
   Correction:= false;
@@ -1725,13 +1739,20 @@ begin
       BestRatio:= FindBestRatioAdv(StartCapital / Rasxod, 1, MyBankr, NumDay, NumSim, StepDay);
     end;
   end else begin
-    //StartTimer(Format('Find Best Ratio by Biff %d ', [NumAlgo]));
-    Memo1.Lines.Add('');
-    Memo1.Lines.Add(Format('Find Best Ratio by Biff %d ...', [NumAlgo]));
+      Memo1.Lines.Add('');
+      Memo1.Lines.Add(Format('Find Best Ratio by Biff %d ...For All Group ', [NumAlgo]));
+      VolGroup:= -1;
+      BestRatio:= FindBestRatio(StartCapital, Rasxod, MyBankr, NumDay, NumSim);
+    if not CheckBoxAllGroup.Checked then
+    for i:= 0 to 22 do begin
+      Memo1.Lines.Add('');
+      Memo1.Lines.Add(Format('Find Best Ratio by Biff %d ...For Group %d', [NumAlgo, i+1]));
 {    if not IsZero(FUPROPerc) then           // Calculate StartRatio for both Biff 3 and Biff 2
       BestRatio:= Round(FUPROPerc *  MaxI)
     else    }
+      VolGroup:= i;
       BestRatio:= FindBestRatio(StartCapital, Rasxod, MyBankr, NumDay, NumSim);
+    end;  
    // SetLength(TempTable, NumDay div StepDay);
    // FindTablePercent(StartCapital, Rasxod, MyBankr, BestRatio, NumDay, NumSim, StepDay, TempTable);
   end;

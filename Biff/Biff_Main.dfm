@@ -1,9 +1,9 @@
 object Form1: TForm1
-  Left = 224
-  Top = 85
+  Left = 221
+  Top = 203
   Width = 893
   Height = 667
-  Caption = 'Biff v.2.01'
+  Caption = 'Biff v.2.02'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -399,7 +399,14 @@ object Form1: TForm1
       'Random'
       '12-Day Volatility')
     TabOrder = 30
-    OnClick = RadioGroupBiffClick
+  end
+  object CheckBoxAllGroup: TCheckBox
+    Left = 224
+    Top = 264
+    Width = 97
+    Height = 17
+    Caption = 'For All Group'
+    TabOrder = 31
   end
   object OpenDialog1: TOpenDialog
     Filter = 'table|*.biff'
