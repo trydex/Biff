@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Math, INIFiles, ComCtrls, ExtCtrls, UnitDialog, Utils, StrUtils;
+  Dialogs, StdCtrls, Math, INIFiles, ComCtrls, ExtCtrls, UnitDialog, Utils, StrUtils, profile;
 
 const
   WM_UPDATE_PB = WM_USER;
@@ -16,6 +16,7 @@ type
     VOO: real;
     UPRO: real;
     Vol: real;  // Volatility
+    NumGroup: integer;
   end;
   TArrPriceData = array of TPriceData;
 
@@ -50,6 +51,8 @@ type
   TCaclBankruptcyAlgo = (AlgoSimple, AlgoAdvanced, AlgoExtra);
 
   TArrayReal = array of real;    // for sort array of Total_EV
+
+  TArrVolGroup = array[0..22] of real;
 
 const
   GroupVol: array[0..22] of real =
@@ -137,6 +140,10 @@ type
     OpenDialog2: TOpenDialog;
     RadioGroupSimMethod: TRadioGroup;
     CheckBoxAllGroup: TCheckBox;
+    CheckBoxShowStat: TCheckBox;
+    RadioGroupDeltaMethod: TRadioGroup;
+    ButtonBacktest: TButton;
+    EditFragment: TEdit;
     procedure ButtonTestClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ButtonClearMemoClick(Sender: TObject);
@@ -162,6 +169,7 @@ type
     procedure ButtonExportStClick(Sender: TObject);
     procedure ButtonImportStClick(Sender: TObject);
     procedure ButtonFillTable2Click(Sender: TObject);
+    procedure ButtonBacktestClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -207,11 +215,15 @@ type
     Precision: real;   // need for Biff3 Fill Table
     StartPercentArr: array of real;
     ManualStartPercentOn: boolean;
-    VolGroup: integer;     // temporally
+    NumVolGroup: integer;     // temporally
+    ArrVolGroup: TArrVolGroup;  //array[0..22] of real;
+    OrigArrVolGroup: TArrVolGroup;
+    ArrProbDeath: array of real;
 
     procedure OpenPriceFile;
     procedure OpenPriceFileByName(var APriceData: TArrPriceData; AFileName: string);
     function GetDirectoryName(NumGroup: integer): string;
+    procedure GetProbDeath;
     procedure GetAllParameter;
     procedure LoadIniFile;
     procedure SaveIniFile;
@@ -223,6 +235,9 @@ type
     procedure Statistic;
     procedure FindBestRatioProcedure;
     function FindBestRatio(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
+    function FindBestRatio_12DayVol(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
+    function FindBestRatio_12DayVol2(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
+
     function FindBestRatioAdv(ACapital, ARasxod, APercent: real; ANumDay, ANumSim, AStepDay: integer): integer;  // Result 0..100 Perc for UPRO
     procedure CalcNumBankruptcyAdvInternal(FirstSeed: Cardinal; AInnerNumSim, ANumDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
@@ -260,9 +275,16 @@ type
     procedure GetInfoFromTableName(AFileName: string);
     procedure SaveStartPrcFile(AFileName: string);
     procedure LoadStartPrcFile(AFileName: string);
-    function CreatePriceDataArray(ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
 
-    
+    function CreatePriceDataArray(ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
+    function BacktestPriceDataArray(AFromDay, ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
+
+    function CorrectArrVolGroup(FArrVolGroup: TArrVolGroup; Delta: real): TArrVolGroup;
+    function CreateArrVolGroup(APercent: real): TArrVolGroup;
+    procedure ShowArrVolGroup(AArrVolGroup: TArrVolGroup);
+    function NotEmpty(AArrVolGroup: TArrVolGroup): boolean;
+    procedure CalculateBacktestEV;
+
  end;
 
 var
@@ -373,6 +395,7 @@ begin
   if IsInflation = false then
     OpenPriceFile; // load price file only if it wasn't loaded before
   //LoadTable; // uncomment to auto-load a table on start
+  GetProbDeath;
   EditUPROPer.Text := '0'; // Temporary
 
   for i:= 0 to MaxI do begin
@@ -385,7 +408,7 @@ begin
     end;
   end;
  SetLogFileName;
- Memo1.Lines.Add(Format('Precision: %f ', [Precision * 100]));
+ //Memo1.Lines.Add(Format('Precision: %f ', [Precision * 100]));
 end;
 
 procedure TForm1.SetLogFileName;
@@ -436,13 +459,6 @@ begin
   for i:= 0 to High(PriceData2Dim) do begin
     OpenPriceFileByName(PriceData2Dim[i], GetDirectoryName(i + 1));
   end;
-  {
-  for i:= 0 to High(PriceData2Dim) do begin
-    Memo1.Lines.Add(Format('Length Group %d : %d ', [i+1, Length(PriceData2Dim[i])]));
-    Suma:= Suma + Length(PriceData2Dim[i]);
-  end;
-  Memo1.Lines.Add(Format('Suma = %d ', [Suma]));
-  }
 end;
 
 function TForm1.GetDirectoryName(NumGroup: integer): string;
@@ -557,7 +573,8 @@ begin
   SetLength(APriceData, Memo1.Lines.Count);
 
   for i:= 0 to Memo1.Lines.Count - 1 do begin
-    with APriceData[i] do begin
+    //with APriceData[i] do begin
+    with APriceData[Memo1.Lines.Count - 1 - i] do begin
       S:= Memo1.Lines[i];
       CurStr:= GetFirstString(S);
       PriceDate:= Utils.StrToDateEx(CurStr);
@@ -570,10 +587,30 @@ begin
   end;
   Memo1.Lines.Clear;
   StatusBar1.Panels[1].Text:= 'Downloaded Price File: ' + PriceFileName;
-  Memo1.Lines.Add('Downloaded Price File: ' + PriceFileName);
+  //Memo1.Lines.Add('Downloaded Price File: ' + PriceFileName);
  except
    Memo1.Lines.Add('File ' + PriceFileName + ' not found.')
  end;
+end;
+
+procedure TForm1.GetProbDeath;
+var
+  i: integer;
+  FileNameStr, S: string;
+begin
+  FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Prices\prob_death.txt';
+  try
+    Memo1.Lines.Clear;
+    Memo1.Lines.LoadFromFile(FileNameStr);
+    SetLength(ArrProbDeath, Memo1.Lines.Count);
+    for i:= 0 to Memo1.Lines.Count - 1 do begin
+      S:= Memo1.Lines[i];
+      ArrProbDeath[i]:= StrToFloat(S);
+    end;
+    Memo1.Lines.Clear;
+  except
+    Memo1.Lines.Add('File ' + FileNameStr + ' not found.')
+  end;
 end;
 
 function TForm1.CreatePriceDataArray(ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
@@ -623,15 +660,17 @@ begin
       Index:= MyRandInt(N);
       ArrPriceData[i]:= PriceData[Index];
       SumaVol:= SumaVol + ArrPriceData[i].Vol;
+      ArrPriceData[i].NumGroup:= FindNumGroup(SumaVol / i);
     end;
 
-   if VolGroup >=0 then begin
-    NumGroup:= VolGroup; //FindNumGroup(SumaVol / 12);
+   if NumVolGroup >=0 then begin
+    NumGroup:= NumVolGroup; //FindNumGroup(SumaVol / 12);
     N:= Length(PriceData2Dim[NumGroup]);
     for i:= 13 to ANumDay do begin
       Index:= MyRandInt(N);
       ArrPriceData[i]:= PriceData2Dim[NumGroup][Index];
-      SumaVol:= SumaVol - ArrPriceData[i - 12].Vol + ArrPriceData[i].Vol;
+      //SumaVol:= SumaVol - ArrPriceData[i - 12].Vol + ArrPriceData[i].Vol;  // nor need find NumGroup
+      ArrPriceData[i].NumGroup:= NumGroup;
     end;
 
    end else begin
@@ -640,6 +679,7 @@ begin
       Index:= MyRandInt(Length(PriceData2Dim[NumGroup]));
       ArrPriceData[i]:= PriceData2Dim[NumGroup][Index];
       SumaVol:= SumaVol - ArrPriceData[i - 12].Vol + ArrPriceData[i].Vol;
+      ArrPriceData[i].NumGroup:= NumGroup;
     end;
    end; 
   end;
@@ -647,6 +687,62 @@ begin
   FirstSeed^ := RandSeed;
   Result := ArrPriceData; 
 end;
+
+function TForm1.BacktestPriceDataArray(AFromDay, ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
+var i, N,  NumGroup, Index, PrevDay: integer;
+  SumaVol: real;
+  RandSeed: Cardinal;
+  ArrPriceData: TArrPriceData;
+
+  function MyRandInt(Range: integer) : integer;
+  asm
+      PUSH    EBX
+      XOR     EBX, EBX
+      IMUL    EDX,[EBX].RandSeed,08088405H
+      INC     EDX
+      MOV     [EBX].RandSeed,EDX
+      MUL     EDX
+      MOV     EAX,EDX
+      POP     EBX
+  end;
+
+  function FindNumGroup(ToFind: real): integer;
+  var
+    N, First, Last, Mid: integer;
+  begin
+    First:= 0;  Last:= 22;
+    while First < Last do begin
+      Mid:= (First + Last) div 2;
+      if GroupVol[Mid] < ToFind then
+        First:= Mid + 1
+      else
+        Last:= Mid ;
+    end;
+    Result:= First;  // or Last
+  end;
+
+begin
+  RandSeed := FirstSeed^;
+  SetLength(ArrPriceData, ANumDay + 1);   // not use 0-index of array
+    SumaVol:= 0;
+    if AFromDay > 12 then
+      PrevDay:= 12
+    else
+      PrevDay:= AFromDay - 1;
+    for i:= 1 to PrevDay do begin
+      SumaVol:= SumaVol + PriceData[AFromDay - i].Vol;
+    end;
+
+    for i:= 1 to ANumDay do begin
+      NumGroup:= FindNumGroup(SumaVol / 12);
+      ArrPriceData[i]:= PriceData[AFromDay + i - 1];
+      SumaVol:= SumaVol - PriceData[AFromDay + i - 13].Vol + ArrPriceData[i].Vol;
+      ArrPriceData[i].NumGroup:= NumGroup;
+    end;
+  FirstSeed^ := RandSeed;
+  Result := ArrPriceData;
+end;
+
 
 procedure TForm1.GetAllParameter;
 begin
@@ -880,9 +976,24 @@ begin
   Memo1.Lines.Add('');
 end;
 
+function TForm1.CorrectArrVolGroup(FArrVolGroup: TArrVolGroup; Delta: real): TArrVolGroup;
+var i: integer;
+begin
+  for i:= 0 to 22 do begin
+    if RadioGroupDeltaMethod.ItemIndex = 0 then begin
+      Result[i]:= FArrVolGroup[i] + Delta;
+    end else begin
+      Result[i]:= FArrVolGroup[i] * Delta;
+    end;
+    if Result[i] > 1 then
+      Result[i]:= 1;
+    if Result[i] < 0 then
+      Result[i]:= 0;
+  end;
+end;
 
 procedure TForm1.CalculateEV;
-var i, k, N, Index, UPROBankrot: integer;
+var i, k, t, N, Index, UPROBankrot: integer;
   VOOCapital, UPROCapital, TotalCapital: real;
   StartVOO, StartUPRO, RasxodVOO, RasxodUPRO, UPROPart: real;
   Total_EV, Total_Day: real;
@@ -892,8 +1003,13 @@ var i, k, N, Index, UPROBankrot: integer;
   CurArrayReal: TArrayReal;  // 1.39
   CurPercentile: real;
   Seed: Cardinal;
+  CurUPROPer, CurVOOPer: real;
   ArrPriceData: TArrPriceData;
-
+  StatVolGroup: array[0..22] of Longint;
+  ArrBankr: array of integer;
+  SumaBankr: Longint;
+  SumaBankr2: real;
+  Delta: real;
 begin
   Memo1.Lines.Add('');
   StartTimer(true, 'Calculating simple EV  ...');
@@ -903,8 +1019,20 @@ begin
     Memo1.Lines.Add('Simulation Method - 12-Day Volatility');
   end;
   N:= Length(PriceData);
-  UPROPer:= (StrToFloatDef(EditUPROPer.Text, 100)) / 100;
-  VOOPer:= 1 - UPROPer;
+  if RadioGroupSimMethod.ItemIndex = 0 then begin  // Random - old method
+    UPROPer:= (StrToFloatDef(EditUPROPer.Text, 100)) / 100;
+    VOOPer:= 1 - UPROPer;
+  end else begin  // 12 Day Vol
+{    if RadioGroupDeltaMethod.ItemIndex = 0 then begin   // Add
+      Delta:= (StrToFloatDef(EditUPROPer.Text, 100)) / 100;
+      ArrVolGroup:= CorrectArrVolGroup(OrigArrVolGroup, Delta); // 500 = 0
+    end else begin                                      // Multiplay
+      Delta:= (StrToFloatDef(EditUPROPer.Text, 100));
+      ArrVolGroup:= CorrectArrVolGroup(OrigArrVolGroup, Delta); // 500 = 0
+    end;
+    }
+    ArrVolGroup:= OrigArrVolGroup;
+  end;
   RePerc:= (StrToFloatDef(EditREPerc.Text, 2)) / 100;
   CanRebalance:= CheckBoxRebalance.Checked;
   Seed := GetTickCount;
@@ -919,6 +1047,8 @@ begin
   RasxodUPRO:= Rasxod * UPROPer;
   SetLength(CurArrayReal, NumSim);  // 1.39
   StartTime:= Now;
+  NumVolGroup:= -1;
+  SetLength(ArrBankr, NumDay + 1);
   for i:= 0 to NumSim - 1 do begin  // 1.39
     VOOCapital:= StartVOO;
     UPROCapital:= StartUPRO;
@@ -952,15 +1082,31 @@ begin
         end;
 
        end else begin     // not CanRebalance (each day auto Rebalance)
-         UPROPart:= UPROPer * UPRO;
+         //if CheckBoxAllGroup.Checked then begin   // not use ArrVolGroup
+         if RadioGroupSimMethod.ItemIndex = 0 then begin  // Random - old method
+           CurUPROPer:= UPROPer;
+           CurVOOPer:= VOOPer;
+         end else begin                           // use ArrVolGroup
+           CurUPROPer:= ArrVolGroup[NumGroup];
+           CurVOOPer:= 1 - CurUPROPer;
+         end;
+
+         UPROPart:= CurUPROPer * UPRO;
          if IsBankruptcy then begin
            if Random(UPROBankr) = 0 then
              UPROPart:= 0;
          end;
-         TotalCapital:= TotalCapital * (VOOPer * VOO + UPROPart) - Rasxod;
+         TotalCapital:= TotalCapital * (CurVOOPer * VOO + UPROPart) - Rasxod;
+         if CheckBoxShowStat.Checked then begin
+           Memo1.Lines.Add(Format('Day: %d   %s   %.6f %.3f   %.6f %.3f   %.6f   %d   %.2f',
+           [k, DateToStr(PriceDate), VOO, CurVOOPer, UPRO, CurUPROPer, Vol, NumGroup+1, TotalCapital ]));
+           //Inc(StatVolGroup[NumGroup]);
+         end;
+         Inc(StatVolGroup[NumGroup]);
          if TotalCapital <= 0 then begin
            Inc(UPROBankrot);
            TotalCapital:= 0;
+           Inc(ArrBankr[k]);
            Break;
          end;
        end;
@@ -968,6 +1114,12 @@ begin
     end;
     Total_EV:= Total_EV + TotalCapital;
     CurArrayReal[i]:= TotalCapital;  // 1.39
+    if CheckBoxShowStat.Checked then begin
+      for t:=0 to 22 do begin
+        Memo1.Lines.Add(Format('Group %d:  %d , %.2f %%', [t+1, StatVolGroup[t], StatVolGroup[t] * 100 /NumSim / NumDay])) ;
+      end;
+      Exit;
+    end;  
   end;
   qSort(CurArrayReal, 0, High(CurArrayReal));   // 1.39
   StartTime:= Now - StartTime;
@@ -991,8 +1143,146 @@ begin
   CurPercentile:= CurArrayReal[((90 * NumSim) div 100) - 1];
   Memo1.Lines.Add(Format('90th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
 
+  Memo1.Lines.Add('');
+      for t:=0 to 22 do begin
+        Memo1.Lines.Add(Format('Group %d:  %d ( %.2f )', [t+1, StatVolGroup[t], (StatVolGroup[t] / NumSim / NumDay) * 100])) ;
+      end;
+  SumaBankr:= 0;
+  Memo1.Lines.Add('');
+  for t:=1 to High(ArrBankr) do begin
+    SumaBankr:= SumaBankr + ArrBankr[t];
+    SumaBankr2:= SumaBankr2 + ArrBankr[t] * ArrProbDeath[t div 251];
+    if (t mod 100) = 0 then begin
+      Memo1.Lines.Add(Format('Day: %d, Bankruptcy: %.2f, with ProbDeath: %.2f', [t, {(ArrBankr[t] / NumSim) * 100,}
+      (SumaBankr) * 100 / NumSim, (SumaBankr2) * 100 / NumSim])) ;
+    end;
+  end;
+  //Memo1.Lines.Add(Format('Bankruptcy with ProbDeath: %f ', [(SumaBankr2) * 100 / NumSim])) ;
   Timer1.Enabled:= false;
 end;
+
+procedure TForm1.CalculateBacktestEV;
+var i, k, t, N, Index, UPROBankrot: integer;
+  VOOCapital, UPROCapital, TotalCapital: real;
+  StartVOO, StartUPRO, RasxodVOO, RasxodUPRO, UPROPart: real;
+  Total_EV, Total_Day: real;
+  VOOPer, UPROPer, RePerc: real;
+  StartTime: TdateTime;
+  CanRebalance: boolean;
+  CurArrayReal: TArrayReal;  // 1.39
+  CurPercentile: real;
+  Seed: Cardinal;
+  CurUPROPer, CurVOOPer: real;
+  ArrPriceData: TArrPriceData;
+  StatVolGroup: array[0..22] of Longint;
+  ArrBankr: array of integer;
+  SumaBankr: Longint;
+  SumaBankr2: real;
+  Delta: real;
+  Fragment: integer;
+begin
+  Memo1.Lines.Add('');
+  StartTimer(true, 'Calculating Backtest EV  ...');
+  if RadioGroupSimMethod.ItemIndex = 0 then begin
+    Memo1.Lines.Add('Simulation Method - Random');
+  end else begin
+    Memo1.Lines.Add('Simulation Method - 12-Day Volatility');
+  end;
+  N:= Length(PriceData);
+  ArrVolGroup:= OrigArrVolGroup;
+  Seed := GetTickCount;
+  Total_EV:= 0;
+  NumSim:= N - NumDay - 12;
+  SetLength(CurArrayReal, NumSim);  // 1.39
+  StartTime:= Now;
+  NumVolGroup:= -1;
+  SetLength(ArrBankr, NumDay + 1);
+  Fragment:= StrToIntDef(EditFragment.Text, 0);
+  for i:= Fragment * 5000 to (Fragment + 1)*5000 - 1 do begin
+//  for i:= 0 to NumSim - 1 do begin  // 1.39
+    TotalCapital:= StartCapital;
+
+    ArrPriceData := BacktestPriceDataArray(i + 13, NumDay, @Seed);
+    for k:= 1 to NumDay do begin
+      with ArrPriceData[k] do begin
+         //if CheckBoxAllGroup.Checked then begin   // not use ArrVolGroup
+         if RadioGroupSimMethod.ItemIndex = 0 then begin  // Random - old method
+           CurUPROPer:= UPROPer;
+           CurVOOPer:= VOOPer;
+         end else begin                           // use ArrVolGroup
+           CurUPROPer:= ArrVolGroup[NumGroup];
+           CurVOOPer:= 1 - CurUPROPer;
+         end;
+
+         UPROPart:= CurUPROPer * UPRO;
+         if IsBankruptcy then begin
+           if Random(UPROBankr) = 0 then
+             UPROPart:= 0;
+         end;
+         TotalCapital:= TotalCapital * (CurVOOPer * VOO + UPROPart) - Rasxod;
+         if CheckBoxShowStat.Checked then begin
+           Memo1.Lines.Add(Format('Day: %d   %s   %.6f  %.3f   %.6f  %.3f   %.6f   %d   %.2f',
+           [k, DateToStr(PriceDate), VOO, CurVOOPer, UPRO, CurUPROPer, Vol, NumGroup+1, TotalCapital ]));
+           //Inc(StatVolGroup[NumGroup]);
+         end;
+         Inc(StatVolGroup[NumGroup]);
+         if TotalCapital <= 0 then begin
+           Inc(UPROBankrot);
+           TotalCapital:= 0;
+           Inc(ArrBankr[k]);
+           Break;
+         end;
+      end;
+    end;
+    Total_EV:= Total_EV + TotalCapital;
+    CurArrayReal[i]:= TotalCapital;  // 1.39
+    if CheckBoxShowStat.Checked then begin
+      for t:=0 to 22 do begin
+        Memo1.Lines.Add(Format('Group %d:  %d , %.2f %%', [t+1, StatVolGroup[t], StatVolGroup[t] * 100 /NumSim / NumDay])) ;
+      end;
+      Exit;
+    end;  
+  end;
+  qSort(CurArrayReal, 0, High(CurArrayReal));   // 1.39
+  StartTime:= Now - StartTime;
+  Total_EV:= Total_EV / NumSim;
+  Total_Day:= Power(Total_EV / StartCapital, 1 / NumDay);;
+  Total_Day:= (Total_Day - 1) * 100;  // in percent
+  Memo1.Lines.Add('Time: ' + TimeToStr(StartTime) + '  UPRO: ' + FloatToStr(UPROPer * 100) + ' %' );
+  Memo1.Lines.Add(Format('EV:  Total: %f ', [Total_EV]));
+  Memo1.Lines.Add(Format('EV daily:  %.6f ', [Total_Day]));
+  Memo1.Lines.Add(Format('Bankruptcy:  %d ( %f ) ', [UPROBankrot, UPROBankrot * 100 / NumSim]));
+  Memo1.Lines.Add('');
+
+  CurPercentile:= CurArrayReal[((10 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('10th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((25 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('25th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((50 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('50th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((75 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('75th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= CurArrayReal[((90 * NumSim) div 100) - 1];
+  Memo1.Lines.Add(Format('90th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+
+  Memo1.Lines.Add('');
+      for t:=0 to 22 do begin
+        Memo1.Lines.Add(Format('Group %d:  %d ( %.2f )', [t+1, StatVolGroup[t], (StatVolGroup[t] / NumSim / NumDay) * 100])) ;
+      end;
+  SumaBankr:= 0;
+  Memo1.Lines.Add('');
+  for t:=1 to High(ArrBankr) do begin
+    SumaBankr:= SumaBankr + ArrBankr[t];
+   // SumaBankr2:= SumaBankr2 + ArrBankr[t] * ArrProbDeath[t div 251];
+    if (t mod 100) = 0 then begin
+      Memo1.Lines.Add(Format('Day: %d, Bankruptcy: %.2f, with ProbDeath: %.2f', [t, {(ArrBankr[t] / NumSim) * 100,}
+      (SumaBankr) * 100 / NumSim, (SumaBankr2) * 100 / NumSim])) ;
+    end;
+  end;
+  //Memo1.Lines.Add(Format('Bankruptcy with ProbDeath: %f ', [(SumaBankr2) * 100 / NumSim])) ;
+  Timer1.Enabled:= false;
+end;
+
 
 procedure TForm1.CalculateEVAdv;
 var
@@ -1260,6 +1550,7 @@ var i, k, index, priceDataLength : integer;
   TotalCapital, UPROPart: real;
   RandSeed,RandSeed2: Cardinal;
   ArrPriceData: TArrPriceData;
+  CurUPROPer, CurVOOPer: real;
 
 function MyRandInt(Range: integer) : integer;
 asm
@@ -1273,7 +1564,7 @@ asm
     POP     EBX
 end;
 begin    // new version from 2.01
-  priceDataLength:= Length(PriceData);
+  //priceDataLength:= Length(PriceData);
   RandSeed := FirstSeed;
 
   for i:= 1 to ANumSim do begin
@@ -1282,22 +1573,30 @@ begin    // new version from 2.01
     for k:= 1 to ANumDay do begin
       if Terminating then
         Exit;
-      //index := MyRandInt(priceDataLength);
-      //with PriceData[index] do begin
-      //with ArrPriceData[k] do begin
-        UPROPart:= StartRatio.UPROPerc * ArrPriceData[k].UPRO;
+      with ArrPriceData[k] do begin
+
+         if NumVolGroup > -1 then begin   // not use ArrVolGroup
+           CurUPROPer:= StartRatio.UPROPerc;
+           CurVOOPer:= StartRatio.VOOPerc;
+         end else begin                           // use ArrVolGroup
+           CurUPROPer:= ArrVolGroup[NumGroup];
+           CurVOOPer:= 1 - CurUPROPer;
+         end;
+
+
+        UPROPart:= {StartRatio.UPROPerc} CurUPROPer * UPRO;
         if IsBankruptcy then begin
           if MyRandInt(UPROBankr) = 0 then
             UPROPart:= 0;
         end;
 
-        TotalCapital:= TotalCapital * (StartRatio.VOOPerc * ArrPriceData[k].VOO + UPROPart) - ARasxod;
+        TotalCapital:= TotalCapital * ({StartRatio.VOOPerc} CurVOOPer * VOO + UPROPart) - ARasxod;
         if TotalCapital <= 0 then begin
           InterlockedIncrement(StartRatio.Bankruptcy);
           TotalCapital:= 0;
           Break;
         end;
-      //end;
+      end;
     end;
   end;
 end;
@@ -1419,6 +1718,289 @@ begin
   //EditUPROPer.Text:= IntToStr(Result);
   EditUPROPer.Text:= FloatToStr(Result * 100 / MaxI);
 
+end;
+
+function TForm1.FindBestRatio_12DayVol(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
+var
+  CurRatio, First, Last, InnerNumSim: integer;
+  StartRatioArray: TRatioArray;
+  StartTime: TDateTime;
+  CurMyBankr: real;
+  Delta, OffSet: real;
+begin
+  Memo1.Lines.Add('');
+  Memo1.Lines.Add(Format('Biff: %d, Capital: %.0f, Rasxod: %.0f, Percent: %.4f, Days: %d, Sim: %d ',
+                         [NumAlgo, ACapital, ARasxod, APercent*100, ANumDay, ANumSim]));
+  NumVolGroup:= -1;   // use ArrVolGroup
+  StartRatioArray:= ZeroRatioArray;
+  StartTime:= Now;
+  InnerNumSim:= ANumSim div 5;
+
+    //CurMyBankr:= MyBankr;         // old Algo
+  CurMyBankr:= APercent;
+  Result:= -1;
+
+  CalcNumBankruptcySimple(InnerNumSim, ANumDay, ACapital, ARasxod, @(StartRatioArray[0]));
+  if StartRatioArray[0].FRatio < CurMyBankr then begin
+    OffSet:= 0;
+  end else begin
+    OffSet:= 1;
+  end;
+      
+  First:= 0;
+  Last:=MaxI;
+
+  while Result < 0 do begin
+    if Terminating then
+      Break;
+
+    if Last - First = 1 then begin
+      if StartRatioArray[First].Total > StartRatioArray[Last].Total  then
+        CurRatio:= Last
+      else
+        CurRatio:= First;
+    end else begin
+      CurRatio:= (First + Last) div 2;
+    end;
+
+    /////  only this line differ from original FindBestRatio
+    Delta:= CurRatio / MaxI - OffSet;
+    if RadioGroupDeltaMethod.ItemIndex = 0 then begin   // Add
+      Memo1.Lines.Add(Format('DeltaProc = %.1f ', [Delta * 100]));
+      ArrVolGroup:= CorrectArrVolGroup(OrigArrVolGroup, Delta); // 500 = 0
+    end else begin                                      // Multiplay
+      Delta:= 1 + Delta ;
+      Memo1.Lines.Add(Format('DeltaProc = *%.4f ', [Delta]));
+      ArrVolGroup:= CorrectArrVolGroup(OrigArrVolGroup, Delta); // 500 = 0
+    end;
+    CalcNumBankruptcySimple(InnerNumSim, ANumDay, ACapital, ARasxod, @(StartRatioArray[CurRatio]));
+
+    with StartRatioArray[CurRatio] do begin
+      if Total >= ANumSim then begin    // End calculation
+        Result:= CurRatio;
+        if FRatio > CurMyBankr then begin
+          Result:= Result - 1;
+          if Result < 0 then
+            Result:= 0;
+        end;
+      end else if FRatio > CurMyBankr then begin
+        Last:= CurRatio;
+        if (First = Last) and (Last > 0) then
+          First:= Last - 1;
+      end else begin
+        First:= CurRatio;
+        if (First = Last) and ( First < MaxI) then
+          Last:= First + 1;
+      end;
+    end;
+  end;   //while
+  StartTime:= Now - StartTime;
+//  Memo1.Lines.Add('');
+  Memo1.Lines.Add('Time: ' + TimeToStr(StartTime));
+  //Memo1.Lines.Add(Format('Day Left: %d,  Best Ratio: %f ', [ANumDay, Result * 100 / MaxI]));
+  if RadioGroupDeltaMethod.ItemIndex = 0 then begin   // Add
+    Memo1.Lines.Add(Format('Day Left: %d,  Delta Ratio: %f ', [ANumDay, Delta * 100]));
+    EditUPROPer.Text:= FloatToStr(Delta * 100);
+  end else begin                                      // Multiplay
+    Memo1.Lines.Add(Format('Day Left: %d,  Koef Ratio: *%f ', [ANumDay, Delta]));
+    EditUPROPer.Text:= FloatToStr(Delta );
+  end;
+
+  //EditUPROPer.Text:= FloatToStr(Result * 100 / MaxI);
+end;
+
+function TForm1.FindBestRatio_12DayVol2(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
+var
+  i, CurRatio, First, Last, InnerNumSim: integer;
+  StartRatioArray: TRatioArray;
+  StartTime: TDateTime;
+  CurMyBankr, PrevMyBankr, CurRealRisk, PrevRealRisk: real;
+  Delta: real;
+begin
+  Memo1.Lines.Add('');
+  Memo1.Lines.Add(Format('Biff: %d, Capital: %.0f, Rasxod: %.0f, Percent: %.4f, Days: %d, Sim: %d ',
+                         [NumAlgo, ACapital, ARasxod, APercent*100, ANumDay, ANumSim]));
+  NumVolGroup:= -1;   // use ArrVolGroup
+  StartRatioArray:= ZeroRatioArray;
+  StartTime:= Now;
+  InnerNumSim:= ANumSim div 5;
+  CurMyBankr:= APercent;
+  CurRatio:= Round(0.5 * MaxI);
+  for i:= 1 to 1 do begin
+    OrigArrVolGroup:= CreateArrVolGroup(CurMyBankr);
+    NumVolGroup:= -1;   // use ArrVolGroup
+    Memo1.Lines.Add(Format('Iteration: %d, Array of Volatility Group for Tardet Risk = %.2f ', [i, CurMyBankr * 100]));
+    ShowArrVolGroup(OrigArrVolGroup);
+    CalcNumBankruptcySimple(ANumSim, ANumDay, ACapital, ARasxod, @(StartRatioArray[CurRatio]));
+    with StartRatioArray[CurRatio] do begin
+      Memo1.Lines.Add(Format('Real Risk = %f ', [FRatio * 100]));
+      PrevRealRisk:= FRatio;
+      Delta:= APercent - FRatio;
+      PrevMyBankr:= CurMyBankr;
+      CurMyBankr:= CurMyBankr + 2 * Delta;
+    end;
+  end;
+  for i:= 2 to 3 do begin
+    OrigArrVolGroup:= CreateArrVolGroup(CurMyBankr);
+    NumVolGroup:= -1;   // use ArrVolGroup
+    Memo1.Lines.Add(Format('Iteration: %d, Array of Volatility Group for Tardet Risk = %.2f ', [i, CurMyBankr * 100]));
+    ShowArrVolGroup(OrigArrVolGroup);
+    CalcNumBankruptcySimple(ANumSim, ANumDay, ACapital, ARasxod, @(StartRatioArray[CurRatio]));
+    with StartRatioArray[CurRatio] do begin
+      CurRealRisk:= FRatio;
+      Memo1.Lines.Add(Format('Real Risk = %f ', [FRatio * 100]));
+      Delta:= (CurMyBankr - PrevMyBankr) / (CurRealRisk - PrevRealRisk);
+      PrevMyBankr:= CurMyBankr;
+//      Delta:= APercent - FRatio;
+//      CurMyBankr:= CurMyBankr + 2 * Delta;
+     CurMyBankr:= CurMyBankr + (APercent - CurRealRisk) * Delta;
+     PrevRealRisk:= CurRealRisk;
+    end;
+  end;
+
+
+  {
+  Result:= -1;
+
+  First:= 0;
+  Last:=MaxI;
+
+  while Result < 0 do begin
+    if Terminating then
+      Break;
+
+    if Last - First = 1 then begin
+      if StartRatioArray[First].Total > StartRatioArray[Last].Total  then
+        CurRatio:= Last
+      else
+        CurRatio:= First;
+    end else begin
+      CurRatio:= (First + Last) div 2;
+    end;
+
+    /////  only this line differ from original FindBestRatio
+    Delta:= CurRatio / MaxI - 0.5;
+    if RadioGroupDeltaMethod.ItemIndex = 0 then begin   // Add
+      Memo1.Lines.Add(Format('DeltaProc = %.1f ', [Delta * 100]));
+      ArrVolGroup:= CorrectArrVolGroup(OrigArrVolGroup, Delta); // 500 = 0
+    end else begin                                      // Multiplay
+      Delta:= 1 + Delta ;
+      Memo1.Lines.Add(Format('DeltaProc = *%.4f ', [Delta]));
+      ArrVolGroup:= CorrectArrVolGroup(OrigArrVolGroup, Delta); // 500 = 0
+    end;
+    CalcNumBankruptcySimple(InnerNumSim, ANumDay, ACapital, ARasxod, @(StartRatioArray[CurRatio]));
+
+    with StartRatioArray[CurRatio] do begin
+      if Total >= ANumSim then begin    // End calculation
+        Result:= CurRatio;
+        if FRatio > CurMyBankr then begin
+          Result:= Result - 1;
+          if Result < 0 then
+            Result:= 0;
+        end;
+      end else if FRatio > CurMyBankr then begin
+        Last:= CurRatio;
+        if (First = Last) and (Last > 0) then
+          First:= Last - 1;
+      end else begin
+        First:= CurRatio;
+        if (First = Last) and ( First < MaxI) then
+          Last:= First + 1;
+      end;
+    end;
+  end;   //while
+  StartTime:= Now - StartTime;
+//  Memo1.Lines.Add('');
+  Memo1.Lines.Add('Time: ' + TimeToStr(StartTime));
+  //Memo1.Lines.Add(Format('Day Left: %d,  Best Ratio: %f ', [ANumDay, Result * 100 / MaxI]));
+  if RadioGroupDeltaMethod.ItemIndex = 0 then begin   // Add
+    Memo1.Lines.Add(Format('Day Left: %d,  Delta Ratio: %f ', [ANumDay, Delta * 100]));
+    EditUPROPer.Text:= FloatToStr(Delta * 100);
+  end else begin                                      // Multiplay
+    Memo1.Lines.Add(Format('Day Left: %d,  Koef Ratio: *%f ', [ANumDay, Delta]));
+    EditUPROPer.Text:= FloatToStr(Delta );
+  end;
+    }
+  //EditUPROPer.Text:= FloatToStr(Result * 100 / MaxI);
+end;
+
+
+function TForm1.CreateArrVolGroup(APercent: real): TArrVolGroup;
+var i: integer;
+
+  procedure FillAllGroups(First, Last: integer);  // recurce
+  var i, Mid, BestRatio: integer;
+
+    procedure FillGroup(AGroup: integer);
+    begin
+      NumVolGroup:= AGroup;
+      BestRatio:= FindBestRatio(StartCapital, Rasxod, APercent{MyBankr}, NumDay, NumSim);
+      ArrVolGroup[NumVolGroup]:= BestRatio /MaxI;
+      Memo1.Lines.Add(Format('Group %d, Ratio = %.2f ', [NumVolGroup+1, BestRatio * 100 /MaxI]));
+    end;
+
+  begin
+    if First > Last then Exit;
+    Mid:= First + (Last - First) div 2;
+    FillGroup(Mid);
+    if IsZero(ArrVolGroup[Mid]) then begin // = 0%
+      FillAllGroups(First, Mid-1);
+      //for i:= Mid + 1 to Last do begin
+      //  ArrVolGroup[i]:= 0; //  0%
+      //end;
+    end else begin
+      for i:= Mid - 1 downto First do begin
+        if ArrVolGroup[i+1] < 1 then begin   // < 100%
+          FillGroup(i);
+        end else begin
+          ArrVolGroup[i]:= 1; //BestRatio / MaxI;
+        end;
+      end;
+    end;
+    if IsZero(ArrVolGroup[Mid] - 1) then begin // = 100%
+      FillAllGroups(Mid+1, Last);
+    end else begin
+      for i:= Mid + 1 to Last do begin
+        if ArrVolGroup[i-1] > 0 then begin   // > 0%
+          FillGroup(i);
+        end else begin
+          ArrVolGroup[i]:= 0; //BestRatio / MaxI;
+        end;
+      end;
+    end;
+  end;
+
+
+begin
+  FillAllGroups(0, 22);
+  {  Memo1.Lines.Add('');
+  for i:= 0 to 22 do begin
+    Memo1.Lines.Add(Format('Group %d, Ratio = %.2f ', [i+1, ArrVolGroup[i] * 100 ]));
+  end;
+ }
+  Result:= ArrVolGroup;
+  //ShowArrVolGroup(ArrVolGroup);
+end;
+
+procedure TForm1.ShowArrVolGroup(AArrVolGroup: TArrVolGroup);
+var i: integer;
+begin
+  Memo1.Lines.Add('');
+  for i:= 0 to 22 do begin
+    Memo1.Lines.Add(Format('Group %d, Ratio = %.2f ', [i+1, AArrVolGroup[i] * 100 ]));
+  end;
+end;
+
+function TForm1.NotEmpty(AArrVolGroup: TArrVolGroup): boolean;
+var i: integer;
+begin
+  Result:= false;
+  for i:= 0 to 22 do begin
+    if AArrVolGroup[i] > 0 then begin
+      Result:= true;
+      Exit;
+    end;  
+  end;
 end;
 
 procedure TForm1.CalcNumBankruptcyAdvInternal(FirstSeed: Cardinal; AInnerNumSim, ANumDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
@@ -1603,7 +2185,7 @@ begin
   StartTime:= Now - StartTime;
   Memo1.Lines.Add('Time: ' + TimeToStr(StartTime));
   Memo1.Lines.Add(Format('Day Left: %d,  Best Ratio: %f ', [ANumDay, Result * 100 / MaxI]));
-  EditUPROPer.Text:= FloatToStr(Result * 100 / MaxI);
+ // EditUPROPer.Text:= FloatToStr(Result * 100 / MaxI);
 end;
 
 
@@ -1738,28 +2320,56 @@ begin
       Memo1.Lines.Add(Format('Find Best Ratio by Biff %d ...', [NumAlgo]));
       BestRatio:= FindBestRatioAdv(StartCapital / Rasxod, 1, MyBankr, NumDay, NumSim, StepDay);
     end;
-  end else begin
+  end else begin // NumAlgo = 0 (Biff 1)
+    if RadioGroupSimMethod.ItemIndex = 0 then begin  // Random (Old Method)
       Memo1.Lines.Add('');
       Memo1.Lines.Add(Format('Find Best Ratio by Biff %d ...For All Group ', [NumAlgo]));
-      VolGroup:= -1;
+      NumVolGroup:= -1;
       BestRatio:= FindBestRatio(StartCapital, Rasxod, MyBankr, NumDay, NumSim);
+      EditUPROPer.Text:= FloatToStr(BestRatio * 100 / MaxI);
+{    if not IsZero(FUPROPerc) then           // Calculate StartRatio for both Biff 3 and Biff 2
+      BestRatio:= Round(FUPROPerc *  MaxI)
+    else    }
+
+    end else begin
+     if RadioGroupDeltaMethod.ItemIndex = 2 then begin    // Iteration
+      BestRatio:= FindBestRatio_12DayVol2(StartCapital, Rasxod, MyBankr, NumDay, NumSim);
+      //OrigArrVolGroup:= ArrVolGroup;
+      BestRatio:= FindBestRatio_12DayVol(StartCapital, Rasxod, MyBankr, NumDay, NumSim);
+      BestRatio:= BestRatio - Round(0.5 * MaxI);
+      Memo1.Lines.Add('Final Array of Volatility Group:');
+      ShowArrVolGroup(ArrVolGroup);
+
+     end else begin
+      //if not NotEmpty(OrigArrVolGroup) then begin
+        OrigArrVolGroup:= CreateArrVolGroup(MyBankr);
+        Memo1.Lines.Add('Original Array of Volatility Group:');
+        ShowArrVolGroup(OrigArrVolGroup);
+      //end;
+      BestRatio:= FindBestRatio_12DayVol(StartCapital, Rasxod, MyBankr, NumDay, NumSim);
+      BestRatio:= BestRatio - Round(0.5 * MaxI);
+      Memo1.Lines.Add('Final Array of Volatility Group:');
+      OrigArrVolGroup:= ArrVolGroup;
+      ShowArrVolGroup(ArrVolGroup);
+     end;
+    end;
+    {
     if not CheckBoxAllGroup.Checked then
     for i:= 0 to 22 do begin
       Memo1.Lines.Add('');
       Memo1.Lines.Add(Format('Find Best Ratio by Biff %d ...For Group %d', [NumAlgo, i+1]));
-{    if not IsZero(FUPROPerc) then           // Calculate StartRatio for both Biff 3 and Biff 2
-      BestRatio:= Round(FUPROPerc *  MaxI)
-    else    }
-      VolGroup:= i;
+      NumVolGroup:= i;
       BestRatio:= FindBestRatio(StartCapital, Rasxod, MyBankr, NumDay, NumSim);
-    end;  
+      ArrVolGroup[i]:= BestRatio / MaxI;
+    end;
+    }
    // SetLength(TempTable, NumDay div StepDay);
    // FindTablePercent(StartCapital, Rasxod, MyBankr, BestRatio, NumDay, NumSim, StepDay, TempTable);
   end;
  end;
   //Timer1.Enabled:= false;
   SaveLog;
-  EditUPROPer.Text:= FloatToStr(BestRatio * 100 / MaxI);
+ // EditUPROPer.Text:= FloatToStr(BestRatio * 100 / MaxI);
 end;
 
 function TForm1.FillRatioForDays(ANumDay, AStepDay: integer; APercent: real): TRatioDayArray;
@@ -3060,6 +3670,7 @@ begin
     '0'..'9': ; // numbers
     #8: ;       // backspace
     #127: ;     // delete
+    '-': ;      // minus
     '.', ',':
       if Pos(DecimalSeparator, (Sender as TEdit).Text) = 0 then
         Key := DecimalSeparator
@@ -3301,6 +3912,13 @@ begin
       FillTableThread := TFillTableThread.Create(StartBlock);
     end;
   end;
+end;
+
+procedure TForm1.ButtonBacktestClick(Sender: TObject);
+begin
+  GetAllParameter;
+  CalculateBacktestEV;
+  SaveLog;
 end;
 
 end.

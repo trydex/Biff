@@ -1,9 +1,9 @@
 object Form1: TForm1
-  Left = 221
-  Top = 203
+  Left = 860
+  Top = 155
   Width = 893
   Height = 667
-  Caption = 'Biff v.2.02'
+  Caption = 'Biff v.2.05'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -402,11 +402,51 @@ object Form1: TForm1
   end
   object CheckBoxAllGroup: TCheckBox
     Left = 224
-    Top = 264
+    Top = 256
     Width = 97
     Height = 17
     Caption = 'For All Group'
     TabOrder = 31
+    Visible = False
+  end
+  object CheckBoxShowStat: TCheckBox
+    Left = 224
+    Top = 280
+    Width = 97
+    Height = 17
+    Caption = 'Show Statistick'
+    TabOrder = 32
+  end
+  object RadioGroupDeltaMethod: TRadioGroup
+    Left = 216
+    Top = 352
+    Width = 193
+    Height = 113
+    Caption = 'Delta Method'
+    ItemIndex = 1
+    Items.Strings = (
+      'Add'
+      'Multiply'
+      'Iteration')
+    TabOrder = 33
+    Visible = False
+  end
+  object ButtonBacktest: TButton
+    Left = 288
+    Top = 304
+    Width = 75
+    Height = 25
+    Caption = 'Backtest'
+    TabOrder = 34
+    OnClick = ButtonBacktestClick
+  end
+  object EditFragment: TEdit
+    Left = 224
+    Top = 304
+    Width = 49
+    Height = 21
+    TabOrder = 35
+    Text = '1'
   end
   object OpenDialog1: TOpenDialog
     Filter = 'table|*.biff'
