@@ -32,8 +32,6 @@ type
     { Private declarations }
   public
     { Public declarations }
-    procedure CopyParameterFromMain;
-    procedure CopyParameterToMain;
   end;
 
 var
@@ -45,30 +43,6 @@ uses
   Biff_Main;
 
   {$R *.dfm}
-
-procedure TFormDialog.CopyParameterFromMain;
-begin
-  EditSims.Text:= Form1.EditSims.Text;
-  EditMyBankr.Text:= Form1.EditMyBankr.Text;
-  EditUPROBankr.Text:= Form1.EditUPROBankr.Text;
-  EditTotalDay.Text:= Form1.EditTotalDay.Text;
-  EditStepDay.Text:= Form1.EditStepDay.Text;
-  CheckBoxAdv.Checked:= Form1.CheckBoxAdv.Checked;
-  CheckBoxInflation.Checked:= Form1.CheckBoxInflation.Checked;
-  RadioGroupBiff.ItemIndex:= Form1.RadioGroupBiff.ItemIndex;
-end;
-
-procedure TFormDialog.CopyParameterToMain;
-begin
-  Form1.EditSims.Text:= EditSims.Text;
-  Form1.EditMyBankr.Text:= EditMyBankr.Text;
-  Form1.EditUPROBankr.Text:= EditUPROBankr.Text;
-  Form1.EditTotalDay.Text:= EditTotalDay.Text;
-  Form1.EditStepDay.Text:= EditStepDay.Text;
-  Form1.CheckBoxAdv.Checked:= CheckBoxAdv.Checked;
-  Form1.CheckBoxInflation.Checked:= CheckBoxInflation.Checked;
-  Form1.RadioGroupBiff.ItemIndex:= RadioGroupBiff.ItemIndex;
-end;
 
 
 end.
