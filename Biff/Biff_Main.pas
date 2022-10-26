@@ -112,10 +112,13 @@ type
     //procedure CalculateEV;
     procedure CalculateDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
     procedure CreateTableDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
+    procedure FindBestRatioThreadSwitcher(ThreadCase: TBestRatioCase);
     procedure FindBestRatioProcedure;
     function FindBestRatio(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
     function FindBestRatio_12DayVol(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
     function FindBestRatio_12DayVol2(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
+    procedure CalculateRiskForNewUser();
+    procedure SomeProcedureForm3();
 
   //  function FindBestRatioAdv(ACapital, ARasxod, APercent: real; ANumDay, ANumSim, AStepDay: integer): integer;  // Result 0..100 Perc for UPRO
  //   procedure CalcNumBankruptcyAdvInternal(FirstSeed: Cardinal; AInnerNumSim, ANumDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
@@ -945,7 +948,18 @@ procedure TForm1.ButtonBestRatioClick(Sender: TObject);
 begin
   ProgressBar.Position := 0;
   CurForm:= Self;
-  BestRatioThread := TBestRatioThread.Create();
+  BestRatioThread := TBestRatioThread.Create(CaseFindBestRatio);
+end;
+
+procedure TForm1.FindBestRatioThreadSwitcher(ThreadCase: TBestRatioCase);
+begin
+  case ThreadCase of
+	  CaseFindBestRatio : FindBestRatioProcedure();
+	  CaseDailyRisk : CalculateRiskForNewUser();
+    CaseSomeNameForm3 : SomeProcedureForm3();
+	else
+    ShowMessage('Unsupported case, please update ThreadCase type');
+  end;
 end;
 
 procedure TForm1.FindBestRatioProcedure();
@@ -969,6 +983,25 @@ begin
  //  SaveLog;
  // EditUPROPer.Text:= FloatToStr(BestRatio * 100 / MaxI);
 end;
+
+procedure TForm1.CalculateRiskForNewUser();
+begin
+  with CurParameter do begin
+    TodayRisk:= TargetRisk;
+    MemoLinesAdd(Format('TodayRisk = %f',[TodayRisk * 100]));
+    FindBestRatioProcedure();    // first iteration with TargetRisk
+    CalculateDayRisk(StocksCapital, DailyExpences, TargetRisk, TodayDayLeft, FNumSim * 10); // for find TodayRisk
+    MemoLinesAdd(Format('TodayRisk = %f',[TodayRisk * 100]));
+    FindBestRatioProcedure();    // second iteration with TodayRisk
+    CreateTableDayRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 10);
+  end;
+end;
+
+procedure TForm1.SomeProcedureForm3();
+begin
+  //TODO: write code here.
+end;
+
 
 procedure TForm1.CalculateDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
                           //(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, NumSim)

@@ -153,7 +153,7 @@ end;
 procedure TForm3.ButtonBestRatioClick(Sender: TObject);
 begin
   //ProgressBar.Position := 0;
-  BestRatioThread := TBestRatioThread.Create();
+  BestRatioThread := TBestRatioThread.Create(CaseSomeNameForm3);
 end;
 
 

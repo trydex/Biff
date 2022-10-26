@@ -115,13 +115,7 @@ begin
   with Form1, CurParameter do begin
     GetParameter;
     CurForm:= Self;
-    TodayRisk:= TargetRisk;
-    MemoLinesAdd(Format('TodayRisk = %f',[TodayRisk * 100]));
-    BestRatioThread := TBestRatioThread.Create();    // first iteration with TargetRisk
-    CalculateDayRisk(StocksCapital, DailyExpences, TargetRisk, TodayDayLeft, FNumSim * 10); // for find TodayRisk
-    MemoLinesAdd(Format('TodayRisk = %f',[TodayRisk * 100]));
-    BestRatioThread := TBestRatioThread.Create();    // second iteration with TodayRisk
-    CreateTableDayRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 10);
+    BestRatioThread := TBestRatioThread.Create(CaseDailyRisk);
   end;
 end;
 

@@ -50,6 +50,8 @@ type
 
   TCaclBankruptcyAlgo = (AlgoSimple, AlgoAdvanced, AlgoExtra);
 
+  TBestRatioCase = (CaseFindBestRatio, CaseDailyRisk, CaseSomeNameForm3);
+
   TArrayReal = array of real;    // for sort array of Total_EV
 
   TArrVolGroup = array[0..22] of real;
@@ -77,8 +79,10 @@ const
 
 type    
   TBestRatioThread = class(TThread)
+  private
+    ThreadCase: TBestRatioCase;
   public
-    constructor Create();
+    constructor Create(ThreadCase: TBestRatioCase);
     procedure Execute; override;
     procedure DoTerminate; override;
   end;
@@ -113,18 +117,20 @@ uses
   Biff_Main, NewUser;
 
 //================================================
-constructor TBestRatioThread.Create();
+constructor TBestRatioThread.Create(ThreadCase: TBestRatioCase);
 begin
   inherited create(false);
   FreeOnTerminate := true;
   Priority := tpNormal;
+
+  self.ThreadCase := ThreadCase;
 end;
 
 procedure TBestRatioThread.Execute;
 begin
   with Form1 do begin  // Old Form1
     //EnableControls(false);
-    FindBestRatioProcedure();
+    FindBestRatioThreadSwitcher(self.ThreadCase);
   end;
 end;
 
