@@ -1,7 +1,7 @@
 object FormNewUser: TFormNewUser
   Left = 188
   Top = 141
-  Width = 797
+  Width = 729
   Height = 621
   Caption = 'New User'
   Color = clBtnFace
@@ -11,116 +11,130 @@ object FormNewUser: TFormNewUser
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   OldCreateOrder = False
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
   object Label1: TLabel
     Left = 16
-    Top = 112
+    Top = 120
     Width = 48
     Height = 13
     Caption = 'Stocks ($)'
   end
   object Label2: TLabel
     Left = 16
-    Top = 208
+    Top = 216
     Width = 102
     Height = 13
     Caption = 'Monthly Expences ($)'
   end
   object Label3: TLabel
-    Left = 32
-    Top = 248
-    Width = 110
+    Left = 16
+    Top = 256
+    Width = 90
     Height = 13
-    Caption = 'Investment Term (days)'
+    Caption = 'Business Days Left'
   end
   object Label4: TLabel
     Left = 16
-    Top = 320
+    Top = 384
     Width = 105
     Height = 13
     Caption = 'Number of Simulations'
   end
   object Label6: TLabel
     Left = 16
-    Top = 72
+    Top = 80
     Width = 132
     Height = 13
     Caption = 'Acceptable Risk of Ruin (%)'
   end
   object Label5: TLabel
     Left = 16
-    Top = 8
+    Top = 16
     Width = 62
     Height = 13
     Caption = 'ScreenName'
   end
   object Label7: TLabel
     Left = 16
-    Top = 40
+    Top = 48
     Width = 59
     Height = 13
     Caption = 'Date of Birth'
   end
   object Label8: TLabel
     Left = 16
-    Top = 144
+    Top = 152
     Width = 37
     Height = 13
     Caption = 'Gold ($)'
   end
   object Label9: TLabel
     Left = 16
-    Top = 176
+    Top = 184
     Width = 83
     Height = 13
     Caption = 'Total Bankroll  ($)'
   end
+  object Label10: TLabel
+    Left = 16
+    Top = 288
+    Width = 78
+    Height = 13
+    Caption = 'Today Days Left'
+  end
   object EditStocks: TEdit
     Left = 152
-    Top = 112
+    Top = 120
     Width = 65
     Height = 21
     TabOrder = 0
     Text = '20000'
+    OnKeyPress = NumericEditKeyPress
   end
   object EditMonthlyExpences: TEdit
     Left = 152
-    Top = 208
+    Top = 216
     Width = 65
     Height = 21
     TabOrder = 1
     Text = '20'
+    OnKeyPress = FloatEditKeyPress
   end
-  object EditDaysLeft: TEdit
+  object EditBusinessDaysLeft: TEdit
     Left = 152
-    Top = 248
+    Top = 256
     Width = 65
     Height = 21
+    Enabled = False
     TabOrder = 2
     Text = '2000'
   end
   object EditNumSim: TEdit
     Left = 152
-    Top = 320
+    Top = 384
     Width = 65
     Height = 21
     Enabled = False
     TabOrder = 3
     Text = '25000'
+    OnKeyPress = NumericEditKeyPress
   end
   object EditTargetRisk: TEdit
     Left = 152
-    Top = 72
+    Top = 80
     Width = 65
     Height = 21
     TabOrder = 4
     Text = '5'
+    OnKeyPress = FloatEditKeyPress
   end
   object CheckBoxBankruptcy: TCheckBox
     Left = 16
-    Top = 352
+    Top = 416
     Width = 121
     Height = 17
     Caption = 'UPRO Daily Fail  1 / '
@@ -131,41 +145,42 @@ object FormNewUser: TFormNewUser
   end
   object EditUPROBankr: TEdit
     Left = 152
-    Top = 352
+    Top = 416
     Width = 65
     Height = 21
     Enabled = False
     TabOrder = 6
     Text = '50000'
+    OnKeyPress = NumericEditKeyPress
   end
   object EditScreenName: TEdit
     Left = 152
-    Top = 8
+    Top = 16
     Width = 89
     Height = 21
     TabOrder = 7
     Text = 'User1'
   end
-  object Button1: TButton
-    Left = 16
-    Top = 400
-    Width = 75
+  object ButtonAddNewUser: TButton
+    Left = 24
+    Top = 464
+    Width = 185
     Height = 25
-    Caption = 'Add Profile'
+    Caption = 'Add New User'
     TabOrder = 8
-    OnClick = Button1Click
+    OnClick = ButtonAddNewUserClick
   end
   object Memo1: TMemo
-    Left = 336
-    Top = 5
+    Left = 264
+    Top = -3
     Width = 441
-    Height = 569
+    Height = 548
     ScrollBars = ssBoth
     TabOrder = 9
   end
   object DateTimePicker1: TDateTimePicker
     Left = 152
-    Top = 40
+    Top = 48
     Width = 89
     Height = 25
     Date = 28055.057939571760000000
@@ -175,15 +190,16 @@ object FormNewUser: TFormNewUser
   end
   object EditGold: TEdit
     Left = 152
-    Top = 144
+    Top = 152
     Width = 65
     Height = 21
     TabOrder = 11
     Text = '2000'
+    OnKeyPress = NumericEditKeyPress
   end
-  object EditTotalCapital: TEdit
+  object EditTotalBankroll: TEdit
     Left = 152
-    Top = 176
+    Top = 184
     Width = 65
     Height = 21
     Enabled = False
@@ -192,38 +208,50 @@ object FormNewUser: TFormNewUser
   end
   object CheckBoxAdvanced: TCheckBox
     Left = 16
-    Top = 288
+    Top = 352
     Width = 121
     Height = 17
     Caption = 'I am advanced user'
     TabOrder = 13
     OnClick = CheckBoxAdvancedClick
   end
-  object ButtonRefresh: TButton
-    Left = 104
-    Top = 400
-    Width = 75
-    Height = 25
-    Caption = 'Refresh'
-    TabOrder = 14
-    OnClick = ButtonRefreshClick
-  end
-  object ButtoncalculateRisk: TButton
+  object ButtonCalculateRisk: TButton
     Left = 24
-    Top = 448
+    Top = 504
     Width = 185
     Height = 25
     Caption = 'Calculate Daily Risks'
-    TabOrder = 15
-    OnClick = ButtoncalculateRiskClick
+    Enabled = False
+    TabOrder = 14
+    OnClick = ButtonCalculateRiskClick
   end
-  object Button2: TButton
-    Left = 72
-    Top = 496
-    Width = 75
+  object ButtonGoMainForm: TButton
+    Left = 24
+    Top = 544
+    Width = 185
     Height = 25
-    Caption = 'Calculate EV'
+    Caption = 'Go to Main Window'
+    Enabled = False
+    TabOrder = 15
+    OnClick = ButtonGoMainFormClick
+  end
+  object EditTodayDayLeft: TEdit
+    Left = 152
+    Top = 288
+    Width = 65
+    Height = 21
+    Enabled = False
     TabOrder = 16
-    OnClick = Button2Click
+    Text = '2000'
+  end
+  object CheckBoxShowCalculating: TCheckBox
+    Left = 408
+    Top = 552
+    Width = 153
+    Height = 17
+    Caption = 'Show calculating process'
+    Checked = True
+    State = cbChecked
+    TabOrder = 17
   end
 end

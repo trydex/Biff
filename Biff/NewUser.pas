@@ -12,7 +12,7 @@ type
     EditStocks: TEdit;
     Label2: TLabel;
     EditMonthlyExpences: TEdit;
-    EditDaysLeft: TEdit;
+    EditBusinessDaysLeft: TEdit;
     Label3: TLabel;
     Label4: TLabel;
     EditNumSim: TEdit;
@@ -22,24 +22,29 @@ type
     EditUPROBankr: TEdit;
     Label5: TLabel;
     EditScreenName: TEdit;
-    Button1: TButton;
+    ButtonAddNewUser: TButton;
     Memo1: TMemo;
     Label7: TLabel;
     DateTimePicker1: TDateTimePicker;
     Label8: TLabel;
     EditGold: TEdit;
     Label9: TLabel;
-    EditTotalCapital: TEdit;
+    EditTotalBankroll: TEdit;
     CheckBoxAdvanced: TCheckBox;
-    ButtonRefresh: TButton;
-    ButtoncalculateRisk: TButton;
-    Button2: TButton;
-    procedure Button1Click(Sender: TObject);
+    ButtonCalculateRisk: TButton;
+    ButtonGoMainForm: TButton;
+    Label10: TLabel;
+    EditTodayDayLeft: TEdit;
+    CheckBoxShowCalculating: TCheckBox;
+    procedure ButtonAddNewUserClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure CheckBoxAdvancedClick(Sender: TObject);
-    procedure ButtonRefreshClick(Sender: TObject);
-    procedure ButtoncalculateRiskClick(Sender: TObject);
-    procedure Button2Click(Sender: TObject);
+    procedure ButtonCalculateRiskClick(Sender: TObject);
+    procedure ButtonGoMainFormClick(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure FormDestroy(Sender: TObject);
+    procedure NumericEditKeyPress(Sender: TObject; var Key: Char);
+    procedure FloatEditKeyPress(Sender: TObject; var Key: Char);
   private
     { Private declarations }
   public
@@ -56,10 +61,6 @@ uses Biff_Main;
 
 {$R *.dfm}
 
-procedure TFormNewUser.Button1Click(Sender: TObject);
-begin
-  ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + EditScreenName.Text);
-end;
 
 procedure TFormNewUser.FormCreate(Sender: TObject);
 begin
@@ -85,11 +86,12 @@ begin
     ScreenName:= EditScreenName.Text;
     DateofBirth:= DateTimePicker1.Date;
     TargetRisk:= StrToFloatDef(EditTargetRisk.Text, 5) / 100;
+    TodayRisk:= TargetRisk;
     StocksCapital:= StrToFloatDef(EditStocks.Text, 0);
     GoldCapital:= StrToFloatDef(EditGold.Text, 0);
     //TotalCapital:= StrToFloatDef(EditTotalCapital.Text, 0);
-    TotalCapital:= StocksCapital + GoldCapital;
-    EditTotalCapital.Text:= FloatToStr(TotalCapital);
+    TotalBankroll:= StocksCapital + GoldCapital;
+    EditTotalBankroll.Text:= FloatToStr(TotalBankroll);
     MonthlyExpences:= StrToFloatDef(EditMonthlyExpences.Text, 0);
     AdvancedUser:= CheckBoxAdvanced.Checked;
     FNumSim:= StrToIntDef(EditNumSim.Text, 25000);
@@ -100,35 +102,61 @@ begin
     BusinessDaysLeft:= Trunc(DateofBirth + 85 * 365.25)  - Trunc(Date);
     BusinessDaysLeft:= Round(BusinessDaysLeft * 251.2 / 365.25);
     TodayDayLeft:= BusinessDaysLeft - Round(GoldCapital / DailyExpences);
-    EditDaysLeft.Text:= IntToStr(TodayDayLeft);
+    EditBusinessDaysLeft.Text:= IntToStr(BusinessDaysLeft);
+    EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
+    CurProfile:= ScreenName;
   end;
 
 end;
 
-procedure TFormNewUser.ButtonRefreshClick(Sender: TObject);
+procedure TFormNewUser.ButtonAddNewUserClick(Sender: TObject);
 begin
+  ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + CurProfile {EditScreenName.Text});
   GetParameter;
+  SaveIniFile;
+  SaveProfileIniFile;
+  ButtonCalculateRisk.Enabled:= true;
 end;
 
-procedure TFormNewUser.ButtoncalculateRiskClick(Sender: TObject);
+procedure TFormNewUser.ButtonCalculateRiskClick(Sender: TObject);
 begin
   with Form1, CurParameter do begin
     GetParameter;
     CurForm:= Self;
     BestRatioThread := TBestRatioThread.Create(CaseDailyRisk);
   end;
+  //ButtonGoMainForm.Enabled:= true;
 end;
 
-procedure TFormNewUser.Button2Click(Sender: TObject);
+procedure TFormNewUser.ButtonGoMainFormClick(Sender: TObject);
 begin
-  GetParameter;
-  CurForm:= Self;
-  with CurParameter do begin
-    Form1.CalculateDayRisk(StocksCapital, DailyExpences, TargetRisk, TodayDayLeft, FNumSim);
- // CalculateEV;
-  //SaveLog;
+  Form1.Visible:= true;
+  Self.Visible:= false;
+end;
+
+procedure TFormNewUser.FormCloseQuery(Sender: TObject;
+  var CanClose: Boolean);
+begin
+  if Assigned(Form1) then  begin
+    Form1.IsClosing:= true;
+    Form1.Close;
   end;
 
+end;
+
+procedure TFormNewUser.FormDestroy(Sender: TObject);
+begin
+  SaveProfileIniFile;
+end;
+
+procedure TFormNewUser.NumericEditKeyPress(Sender: TObject; var Key: Char);
+begin
+  Form1.NumericEditKeyPress(Sender,  Key);
+end;
+
+procedure TFormNewUser.FloatEditKeyPress(Sender: TObject; var Key: Char);
+begin
+  Form1.FloatEditKeyPress(Sender, Key);
 end;
 
 end.

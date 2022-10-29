@@ -1,6 +1,6 @@
 object FormLogin: TFormLogin
-  Left = 186
-  Top = 345
+  Left = 206
+  Top = 343
   BorderStyle = bsDialog
   Caption = 'Choose profile'
   ClientHeight = 234
