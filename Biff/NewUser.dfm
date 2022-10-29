@@ -1,6 +1,6 @@
 object FormNewUser: TFormNewUser
-  Left = 188
-  Top = 141
+  Left = 289
+  Top = 204
   Width = 729
   Height = 621
   Caption = 'New User'
@@ -82,12 +82,12 @@ object FormNewUser: TFormNewUser
   object Label10: TLabel
     Left = 16
     Top = 288
-    Width = 78
+    Width = 127
     Height = 13
-    Caption = 'Today Days Left'
+    Caption = 'Business Days before Gold'
   end
   object EditStocks: TEdit
-    Left = 152
+    Left = 160
     Top = 120
     Width = 65
     Height = 21
@@ -96,7 +96,7 @@ object FormNewUser: TFormNewUser
     OnKeyPress = NumericEditKeyPress
   end
   object EditMonthlyExpences: TEdit
-    Left = 152
+    Left = 160
     Top = 216
     Width = 65
     Height = 21
@@ -105,7 +105,7 @@ object FormNewUser: TFormNewUser
     OnKeyPress = FloatEditKeyPress
   end
   object EditBusinessDaysLeft: TEdit
-    Left = 152
+    Left = 160
     Top = 256
     Width = 65
     Height = 21
@@ -114,7 +114,7 @@ object FormNewUser: TFormNewUser
     Text = '2000'
   end
   object EditNumSim: TEdit
-    Left = 152
+    Left = 160
     Top = 384
     Width = 65
     Height = 21
@@ -124,7 +124,7 @@ object FormNewUser: TFormNewUser
     OnKeyPress = NumericEditKeyPress
   end
   object EditTargetRisk: TEdit
-    Left = 152
+    Left = 160
     Top = 80
     Width = 65
     Height = 21
@@ -144,7 +144,7 @@ object FormNewUser: TFormNewUser
     TabOrder = 5
   end
   object EditUPROBankr: TEdit
-    Left = 152
+    Left = 160
     Top = 416
     Width = 65
     Height = 21
@@ -154,7 +154,7 @@ object FormNewUser: TFormNewUser
     OnKeyPress = NumericEditKeyPress
   end
   object EditScreenName: TEdit
-    Left = 152
+    Left = 160
     Top = 16
     Width = 89
     Height = 21
@@ -162,7 +162,7 @@ object FormNewUser: TFormNewUser
     Text = 'User1'
   end
   object ButtonAddNewUser: TButton
-    Left = 24
+    Left = 32
     Top = 464
     Width = 185
     Height = 25
@@ -175,11 +175,12 @@ object FormNewUser: TFormNewUser
     Top = -3
     Width = 441
     Height = 548
+    ReadOnly = True
     ScrollBars = ssBoth
     TabOrder = 9
   end
   object DateTimePicker1: TDateTimePicker
-    Left = 152
+    Left = 160
     Top = 48
     Width = 89
     Height = 25
@@ -189,7 +190,7 @@ object FormNewUser: TFormNewUser
     TabOrder = 10
   end
   object EditGold: TEdit
-    Left = 152
+    Left = 160
     Top = 152
     Width = 65
     Height = 21
@@ -198,7 +199,7 @@ object FormNewUser: TFormNewUser
     OnKeyPress = NumericEditKeyPress
   end
   object EditTotalBankroll: TEdit
-    Left = 152
+    Left = 160
     Top = 184
     Width = 65
     Height = 21
@@ -216,7 +217,7 @@ object FormNewUser: TFormNewUser
     OnClick = CheckBoxAdvancedClick
   end
   object ButtonCalculateRisk: TButton
-    Left = 24
+    Left = 32
     Top = 504
     Width = 185
     Height = 25
@@ -226,7 +227,7 @@ object FormNewUser: TFormNewUser
     OnClick = ButtonCalculateRiskClick
   end
   object ButtonGoMainForm: TButton
-    Left = 24
+    Left = 32
     Top = 544
     Width = 185
     Height = 25
@@ -236,7 +237,7 @@ object FormNewUser: TFormNewUser
     OnClick = ButtonGoMainFormClick
   end
   object EditTodayDayLeft: TEdit
-    Left = 152
+    Left = 160
     Top = 288
     Width = 65
     Height = 21
@@ -253,5 +254,14 @@ object FormNewUser: TFormNewUser
     Checked = True
     State = cbChecked
     TabOrder = 17
+  end
+  object Button1: TButton
+    Left = 152
+    Top = 328
+    Width = 75
+    Height = 25
+    Caption = 'Button1'
+    TabOrder = 18
+    OnClick = Button1Click
   end
 end

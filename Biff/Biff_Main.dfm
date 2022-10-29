@@ -92,6 +92,7 @@ object Form1: TForm1
     Top = 8
     Width = 441
     Height = 569
+    ReadOnly = True
     ScrollBars = ssBoth
     TabOrder = 0
     OnKeyPress = Memo1KeyPress

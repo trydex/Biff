@@ -200,8 +200,14 @@ begin
   try
     Form1.Left:= AIniFile.ReadInteger('Common', 'Left', Form1.Left);
     Form1.Top:= AIniFile.ReadInteger('Common', 'Top', Form1.Top);
-    Form1.Width:= AIniFile.ReadInteger('Common', 'Width', Form1.Left);
-    Form1.Height:= AIniFile.ReadInteger('Common', 'Height', Form1.Left);
+    Form1.Width:= AIniFile.ReadInteger('Common', 'Width', Form1.Width);
+    Form1.Height:= AIniFile.ReadInteger('Common', 'Height', Form1.Height);
+    with FormNewUser do begin
+      Left:= AIniFile.ReadInteger('NewUser', 'Left', Left);
+      Top:= AIniFile.ReadInteger('NewUser', 'Top', Top);
+      Width:= AIniFile.ReadInteger('NewUser', 'Width', Width);
+      Height:= AIniFile.ReadInteger('NewUser', 'Height', Height);
+    end;
   finally
     FreeAndNil(AIniFile);
   end;
@@ -222,6 +228,16 @@ begin
     AIniFile.WriteInteger('Common', 'Top', Form1.Top);
     AIniFile.WriteInteger('Common', 'Width', Form1.Width);
     AIniFile.WriteInteger('Common', 'Height', Form1.Height);
+
+    //if Assigned(FormNewUser) then begin
+     //with TFormNewUser(FormNewUser) do begin
+      AIniFile.WriteInteger('NewUser', 'Left', FormNewUser.Left);
+      AIniFile.WriteInteger('NewUser', 'Top', FormNewUser.Top);
+      AIniFile.WriteInteger('NewUser', 'Width', FormNewUser.Width);
+      AIniFile.WriteInteger('NewUser', 'Height', FormNewUser.Height);
+     //end;
+    //end;
+
   finally
     FreeAndNil(AIniFile);
   end;

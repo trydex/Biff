@@ -146,7 +146,7 @@ begin
   IsInflation:= true;
   CanShow:= false;
   GetAllProfiles;
-  LoadIniFile;
+
   BeginProfile: 
   if not Assigned(FormProfile) then
     FormProfile:= TFormProfile.Create(Self);
@@ -176,7 +176,7 @@ begin
     Close;
   end;
   FormProfile.Free;
-
+  LoadIniFile;
   Randomize;
   // Update decimal separator only for currect application.
   Application.UpdateFormatSettings := false;
@@ -222,9 +222,9 @@ end;
 
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
-  SaveLog;
-  SaveIniFile;
-  SaveProfileIniFile;
+//  SaveLog;
+//  SaveIniFile;
+//  SaveProfileIniFile;
 end;
 
 
@@ -1186,6 +1186,10 @@ end;
 procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
   // In case closing was already queried, don't ask permission.
+  SaveLog;
+  SaveIniFile;
+  SaveProfileIniFile;
+
   if IsClosing then begin
     CanClose := true;
     Application.Terminate;

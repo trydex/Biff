@@ -36,6 +36,7 @@ type
     Label10: TLabel;
     EditTodayDayLeft: TEdit;
     CheckBoxShowCalculating: TCheckBox;
+    Button1: TButton;
     procedure ButtonAddNewUserClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure CheckBoxAdvancedClick(Sender: TObject);
@@ -45,6 +46,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure NumericEditKeyPress(Sender: TObject; var Key: Char);
     procedure FloatEditKeyPress(Sender: TObject; var Key: Char);
+    procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -67,6 +69,7 @@ begin
   DateTimePicker1.MaxDate:= Date - Round(15 * 365.25);
   DateTimePicker1.MinDate:= Date - Round(84 * 365.25);
   //DateTimePicker1.Date:= Date - Round(8 * 365.25);
+  CurForm:= Self;
   GetParameter;
 end;
 
@@ -105,6 +108,14 @@ begin
     EditBusinessDaysLeft.Text:= IntToStr(BusinessDaysLeft);
     EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
     CurProfile:= ScreenName;
+    if TodayDayLeft < 0 then begin
+      TodayDayLeft:= 0;
+      MemoLinesAdd('You will never be broke.');
+      MemoLinesAdd('Your gold assets are enough for the rest of your life.');
+      MemoLinesAdd('Invest all your stock money to UPRO and have fun.');
+      MemoLinesAdd('YOU DON''T NEED BIFF.');
+    end;
+    EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
   end;
 
 end;
@@ -115,7 +126,10 @@ begin
   GetParameter;
   SaveIniFile;
   SaveProfileIniFile;
-  ButtonCalculateRisk.Enabled:= true;
+  if CurParameter.TodayDayLeft > 0 then
+    ButtonCalculateRisk.Enabled:= true
+  else
+    ButtonCalculateRisk.Enabled:= false;  
 end;
 
 procedure TFormNewUser.ButtonCalculateRiskClick(Sender: TObject);
@@ -137,6 +151,9 @@ end;
 procedure TFormNewUser.FormCloseQuery(Sender: TObject;
   var CanClose: Boolean);
 begin
+  //SaveIniFile;
+  SaveProfileIniFile;
+
   if Assigned(Form1) then  begin
     Form1.IsClosing:= true;
     Form1.Close;
@@ -146,7 +163,8 @@ end;
 
 procedure TFormNewUser.FormDestroy(Sender: TObject);
 begin
-  SaveProfileIniFile;
+//  SaveIniFile;
+//  SaveProfileIniFile;
 end;
 
 procedure TFormNewUser.NumericEditKeyPress(Sender: TObject; var Key: Char);
@@ -158,5 +176,15 @@ procedure TFormNewUser.FloatEditKeyPress(Sender: TObject; var Key: Char);
 begin
   Form1.FloatEditKeyPress(Sender, Key);
 end;
+
+procedure TFormNewUser.Button1Click(Sender: TObject);
+begin
+  CurForm:= Self;
+  Caption:= Caption + 'Left = ' + IntToStr(Left); 
+  MemoLinesAdd(Format('Left = %d ', [Self.Left]));
+  MemoLinesAdd(Format('Top = %d ', [Self.Top]));
+  SaveIniFile;
+end;
+
 
 end.
