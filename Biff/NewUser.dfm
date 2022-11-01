@@ -1,6 +1,6 @@
 object FormNewUser: TFormNewUser
-  Left = 289
-  Top = 204
+  Left = 472
+  Top = 164
   Width = 729
   Height = 621
   Caption = 'New User'
@@ -232,7 +232,6 @@ object FormNewUser: TFormNewUser
     Width = 185
     Height = 25
     Caption = 'Go to Main Window'
-    Enabled = False
     TabOrder = 15
     OnClick = ButtonGoMainFormClick
   end
@@ -254,14 +253,5 @@ object FormNewUser: TFormNewUser
     Checked = True
     State = cbChecked
     TabOrder = 17
-  end
-  object Button1: TButton
-    Left = 152
-    Top = 328
-    Width = 75
-    Height = 25
-    Caption = 'Button1'
-    TabOrder = 18
-    OnClick = Button1Click
   end
 end

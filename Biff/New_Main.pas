@@ -30,7 +30,6 @@ type
     procedure FormCreate(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
-    procedure FormDestroy(Sender: TObject);
   private
     { Private declarations }
     BestRatioThread: TBestRatioThread;
@@ -181,12 +180,6 @@ begin
     CanClose := IsClosing; // Otherwise relay on user's chiose.
   end;
 
-end;
-
-procedure TForm3.FormDestroy(Sender: TObject);
-begin
-//  SaveLog;
-//  SaveIniFile;
 end;
 
 end.

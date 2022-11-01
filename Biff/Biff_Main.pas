@@ -20,13 +20,13 @@ type
     Label7: TLabel;
     DateTimePicker1: TDateTimePicker;
     Label6: TLabel;
-    EditTargetRisk: TEdit;
+    EditTodayRisk: TEdit;
     Label1: TLabel;
     EditStocks: TEdit;
     Label8: TLabel;
     EditGold: TEdit;
     Label9: TLabel;
-    EditTotalCapital: TEdit;
+    EditTotalBankroll: TEdit;
     Label2: TLabel;
     EditMonthlyExpences: TEdit;
     Label3: TLabel;
@@ -38,9 +38,13 @@ type
     EditNumSim: TEdit;
     CheckBoxBankruptcy: TCheckBox;
     EditUPROBankr: TEdit;
+    ButtonRefreshParameter: TButton;
+    ButtonCalculateRisk: TButton;
+    ListBoxVolGroup: TListBox;
+    Button1: TButton;
     procedure FormCreate(Sender: TObject);
     procedure ButtonClearMemoClick(Sender: TObject);
-    procedure ButtonUPROClick(Sender: TObject);
+  //  procedure ButtonUPROClick(Sender: TObject);
     procedure ButtonBestRatioClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure EnableControls(enable: bool);
@@ -48,6 +52,10 @@ type
     procedure Memo1KeyPress(Sender: TObject; var Key: Char);
     procedure NumericEditKeyPress(Sender: TObject; var Key: Char);
     procedure FloatEditKeyPress(Sender: TObject; var Key: Char);
+    procedure ButtonRefreshParameterClick(Sender: TObject);
+    procedure ButtonCalculateRiskClick(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+    procedure CheckBoxAdvancedClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -96,9 +104,9 @@ type
     function GetDirectoryName(NumGroup: integer): string;
     procedure GetProbDeath;
     procedure GetProbDeathArr;
-    procedure GetAllParameter;
-    //procedure LoadIniFile;
-    //procedure SaveIniFile;
+    //procedure GetAllParameter;
+    procedure GetMainParameter;
+    procedure SetParameter;
     procedure SetLogFileName;
     procedure SaveLog;
     //procedure CalculateEV;
@@ -124,6 +132,7 @@ type
     function CorrectArrVolGroup(FArrVolGroup: TArrVolGroup; Delta: real): TArrVolGroup;
     function CreateArrVolGroup(APercent: real): TArrVolGroup;
     procedure ShowArrVolGroup(AArrVolGroup: TArrVolGroup);
+    procedure ShowArrVolGroupForm(AArrVolGroup: TArrVolGroup);
     function NotEmpty(AArrVolGroup: TArrVolGroup): boolean;
 
  end;
@@ -161,7 +170,10 @@ begin
     FormLogin.ShowModal;
     if FormLogin.ModalResult = mrOk then begin
       CurProfile:= AllProfiles[Formlogin.ListBox1.ItemIndex];
+      CurForm:= Self;
+      LoadTableDayRisk(TableDayRisk);
       LoadProfileIniFile;
+      SetParameter;
       CanShow:= true;
       //Self.Visible:= true;
     end else if FormLogin.ModalResult = mrAbort then begin
@@ -223,17 +235,8 @@ end;
 procedure TForm1.FormDestroy(Sender: TObject);
 begin
 //  SaveLog;
-//  SaveIniFile;
-//  SaveProfileIniFile;
 end;
 
-
-procedure TForm1.ButtonUPROClick(Sender: TObject);
-begin
-  GetAllParameter;
- // CalculateEV;
-  SaveLog;
-end;
 
 procedure TForm1.ButtonClearMemoClick(Sender: TObject);
 begin
@@ -447,20 +450,6 @@ begin
   Result := ArrPriceData; 
 end;
 
-
-procedure TForm1.GetAllParameter;
-begin
-{  StartCapital:= StrToFloatDef(EditCapital.Text, 100000);
-  Rasxod:=  StrToFloatDef(EditRasxod.Text, 10);
-  NumDay:= StrToIntDef(EditDays.Text, 250);
-  NumSim:= StrToIntDef(EditSims.Text, 1000000);
-  MYBankr:= StrToFloatDef(EditMyBankr.Text, 10) / 100;
-  UPROBankr:= StrToIntDef(EditUPROBankr.Text, 50000);
-  IsBankruptcy:= CheckBoxBankruptcy.Checked;
-  FUPROPerc:= StrToFloatDef(EditUPROPer.Text, 0) / 100;
-  FVOOPerc:= 1 - FUPROPerc;
-  }
-end;
 
 function TForm1.CorrectArrVolGroup(FArrVolGroup: TArrVolGroup; Delta: real): TArrVolGroup;
 var i: integer;
@@ -877,6 +866,7 @@ end;
 procedure TForm1.ButtonBestRatioClick(Sender: TObject);
 begin
   ProgressBar.Position := 0;
+  GetMainParameter;
   CurForm:= Self;
   BestRatioThread := TBestRatioThread.Create(CaseFindBestRatio);
 end;
@@ -908,6 +898,7 @@ begin
       MemoLinesAdd('Final Array of Volatility Group:');
       OrigArrVolGroup:= ArrVolGroup;
       ShowArrVolGroup(ArrVolGroup);
+      ShowArrVolGroupForm(ArrVolGroup);
     end;
  //  SaveLog;
  // EditUPROPer.Text:= FloatToStr(BestRatio * 100 / MaxI);
@@ -915,7 +906,8 @@ end;
 
 procedure TForm1.CalculateRiskForNewUser();
 begin
-  with CurParameter, FormNewUser do begin
+  //with CurParameter, FormNewUser do begin
+  with CurParameter, CurForm do begin
     TodayRisk:= TargetRisk;
     //MemoLinesAdd(Format('TodayRisk = %f',[TodayRisk * 100]));
     Memo1.Lines.Add('');
@@ -937,11 +929,14 @@ begin
     CreateTableDayRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 10);
     Memo1.Lines.Add('');
     Memo1.Lines.Add('All calculating is finished.');
-    Memo1.Lines.Add('Now You can Go to Main Window.');
+    if CurForm is TFormNewUser then begin
+      Memo1.Lines.Add('Now You can Go to Main Window.');
+    end;
   end;
   if Assigned(FormNewUser) then begin
     FormNewUser.ButtonGoMainForm.Enabled:= true;
-  end;  
+  end;
+  ShowArrVolGroupForm(ArrVolGroup);
 end;
 
 procedure TForm1.SomeProcedureForm3();
@@ -1165,7 +1160,88 @@ begin
   //Memo1.Lines.Add(Format('Bankruptcy with ProbDeath: %f ', [(SumaBankr2) * 100 / NumSim])) ;
 end;
 
+procedure TForm1.GetMainParameter;
+begin
+  with CurParameter do begin
+//    ScreenName:= EditScreenName.Text;
+//    DateofBirth:= DateTimePicker1.Date;
+//    TargetRisk:= StrToFloatDef(EditTargetRisk.Text, 5) / 100;
+//    TodayRisk:= TargetRisk;
+    StocksCapital:= StrToFloatDef(EditStocks.Text, 0);
+    GoldCapital:= StrToFloatDef(EditGold.Text, 0);
+    TotalBankroll:= StocksCapital + GoldCapital;
+    EditTotalBankroll.Text:= FloatToStr(TotalBankroll);
+    MonthlyExpences:= StrToFloatDef(EditMonthlyExpences.Text, 0);
+    AdvancedUser:= CheckBoxAdvanced.Checked;
+    FNumSim:= StrToIntDef(EditNumSim.Text, 25000);
+    IsBankruptcy:= CheckBoxBankruptcy.Checked;
+    UPROBankr:= StrToIntDef(EditUPROBankr.Text, 50000);
+    CalculateDayLeft(DateTimePicker1.Date);
+  {
+    DailyExpences:= MonthlyExpences / 20.933;   // Check it !!!
+    BusinessDaysLeft:= Trunc(DateofBirth + 85 * 365.25)  - Trunc(Date);
+    BusinessDaysLeft:= Round(BusinessDaysLeft * 251.2 / 365.25);
+    TodayDayLeft:= BusinessDaysLeft - Round(GoldCapital / DailyExpences);
+   }
+    EditBusinessDaysLeft.Text:= IntToStr(BusinessDaysLeft);
+    EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
+    CurProfile:= ScreenName;
+    if TodayDayLeft < 0 then begin
+      TodayDayLeft:= 0;
+      MemoLinesAdd('You will never be broke.');
+      MemoLinesAdd('Your gold assets are enough for the rest of your life.');
+      MemoLinesAdd('Invest all your stock money to UPRO and have fun.');
+      MemoLinesAdd('YOU DON''T NEED BIFF.');
+    end else if TodayDayLeft > High(TableDayRisk) then begin
+      MemoLinesAdd('');
+      MemoLinesAdd('Today Risk not finded.');
+      MemoLinesAdd('First of all create Table Day Risk.');
+    end else begin
+      TodayRisk:= TableDayRisk[TodayDayLeft] ;
+//      EditTodayRisk.Text:= FloatToStr(TodayRisk * 100);
+      EditTodayRisk.Text:= Format('%f', [TodayRisk * 100]);
 
+    end;
+    EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
+  end;
+
+end;
+
+
+procedure TForm1.SetParameter;
+begin
+  with CurParameter do begin
+    CalculateDayLeft(DateTimePicker1.Date);
+    EditScreenName.Text:= ScreenName;
+    DateTimePicker1.Date:= Date;
+    EditTodayRisk.Text:= FloatToStr(TodayRisk * 100);
+    EditStocks.Text:= FloatToStr(StocksCapital);
+    EditGold.Text:= FloatToStr(GoldCapital);
+    TotalBankroll:= StocksCapital + GoldCapital;
+    EditTotalBankroll.Text:= FloatToStr(TotalBankroll);
+    EditMonthlyExpences.Text:= FloatToStr(MonthlyExpences);
+    AdvancedUser:= CheckBoxAdvanced.Checked;
+    FNumSim:= StrToIntDef(EditNumSim.Text, 25000);
+    IsBankruptcy:= CheckBoxBankruptcy.Checked;
+    UPROBankr:= StrToIntDef(EditUPROBankr.Text, 50000);
+
+    EditBusinessDaysLeft.Text:= IntToStr(BusinessDaysLeft);
+    EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
+  end;
+  GetMainParameter;  // ???
+end;
+
+procedure TForm1.ShowArrVolGroupForm(AArrVolGroup: TArrVolGroup);
+var i: integer;
+begin
+  with ListBoxVolGroup do begin
+    //ListBoxVolGroup.Count:= 23;
+    if Length(AArrVolGroup) = 23 then
+    for i:= 0 to 22 do begin
+      Items[i]:= Format(' %2d:  %2.2F' + '%', [i+1, AArrVolGroup[i] * 100]);
+    end;
+  end;    
+end;
 
 procedure TForm1.EnableControls(enable: bool);
 begin
@@ -1186,10 +1262,18 @@ end;
 procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
   // In case closing was already queried, don't ask permission.
+  if CurForm <> nil then begin
+    SaveLog;
+    SaveIniFile;
+  //  CurForm:= Self;
+    SaveProfileIniFile;
+  end;
+{
+  CurForm:= Self;
   SaveLog;
   SaveIniFile;
   SaveProfileIniFile;
-
+ }
   if IsClosing then begin
     CanClose := true;
     Application.Terminate;
@@ -1243,5 +1327,35 @@ begin
   end;
 end;
 
+
+procedure TForm1.ButtonRefreshParameterClick(Sender: TObject);
+begin
+  GetMAinParameter;
+end;
+
+procedure TForm1.ButtonCalculateRiskClick(Sender: TObject);
+begin
+//  with Form1, CurParameter do begin
+  if MessageDlg('You should recalculate daily risks only if your parameter is changed a lot. '
+                + 'Do you really want to recalculate?' , mtCustom, [mbYes, mbNo], 0) = mrYes then begin
+    GetMainParameter;
+    CurForm:= Self;
+    BestRatioThread := TBestRatioThread.Create(CaseDailyRisk);
+  end;
+end;
+
+procedure TForm1.Button1Click(Sender: TObject);
+begin
+  ShowArrVolGroupForm(ArrVolGroup);
+end;
+
+procedure TForm1.CheckBoxAdvancedClick(Sender: TObject);
+var IsEnabled: boolean;
+begin
+  IsEnabled:= CheckBoxAdvanced.Checked;
+  EditNumSim.Enabled:= IsEnabled;
+  EditUPROBankr.Enabled:= IsEnabled;
+  CheckBoxBankruptcy.Enabled:= IsEnabled;
+end;
 
 end.

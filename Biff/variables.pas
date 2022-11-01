@@ -119,6 +119,7 @@ var
   procedure LoadTableDayRisk(var ATable: TArrayReal);
   procedure SaveTableDayRisk(ATable: TArrayReal);
   procedure AddToTableDayRisk(var ATable: TArrayReal; ADayRisk: TArrayReal);
+  procedure CalculateDayLeft(ATodayDate: TDate);
 
 implementation
 
@@ -198,15 +199,27 @@ begin
   AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
   AIniFile:= IniFiles.TIniFile.Create(AFileName);
   try
-    Form1.Left:= AIniFile.ReadInteger('Common', 'Left', Form1.Left);
-    Form1.Top:= AIniFile.ReadInteger('Common', 'Top', Form1.Top);
-    Form1.Width:= AIniFile.ReadInteger('Common', 'Width', Form1.Width);
-    Form1.Height:= AIniFile.ReadInteger('Common', 'Height', Form1.Height);
-    with FormNewUser do begin
-      Left:= AIniFile.ReadInteger('NewUser', 'Left', Left);
-      Top:= AIniFile.ReadInteger('NewUser', 'Top', Top);
-      Width:= AIniFile.ReadInteger('NewUser', 'Width', Width);
-      Height:= AIniFile.ReadInteger('NewUser', 'Height', Height);
+    //if Assigned(Form1) then
+    if CurForm is TForm1 then begin
+      with TForm1(CurForm) do begin
+
+ //   with Form1 do begin
+        Left:= AIniFile.ReadInteger('Common', 'Left', Left);
+        Top:= AIniFile.ReadInteger('Common', 'Top', Top);
+        Width:= AIniFile.ReadInteger('Common', 'Width', Width);
+        Height:= AIniFile.ReadInteger('Common', 'Height', Height);
+      end;
+    end;
+ //   if Assigned(FormNewUser) then
+    if CurForm is TFormNewUser then begin
+      with TFormNewUser(CurForm) do begin
+
+//    with FormNewUser do begin
+        Left:= AIniFile.ReadInteger('NewUser', 'Left', Left);
+        Top:= AIniFile.ReadInteger('NewUser', 'Top', Top);
+        Width:= AIniFile.ReadInteger('NewUser', 'Width', Width);
+        Height:= AIniFile.ReadInteger('NewUser', 'Height', Height);
+      end;  
     end;
   finally
     FreeAndNil(AIniFile);
@@ -220,24 +233,26 @@ var
   AFileName: string;
   i: integer;
 begin
-  //GetAllParameter;
   AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
   AIniFile:= IniFiles.TIniFile.Create(AFileName);
   try
-    AIniFile.WriteInteger('Common', 'Left', Form1.Left);
-    AIniFile.WriteInteger('Common', 'Top', Form1.Top);
-    AIniFile.WriteInteger('Common', 'Width', Form1.Width);
-    AIniFile.WriteInteger('Common', 'Height', Form1.Height);
+    if CurForm is TForm1 then begin
+      with TForm1(CurForm) do begin
+        AIniFile.WriteInteger('Common', 'Left', Left);
+        AIniFile.WriteInteger('Common', 'Top', Top);
+        AIniFile.WriteInteger('Common', 'Width', Width);
+        AIniFile.WriteInteger('Common', 'Height', Height);
+      end;
+    end;
 
-    //if Assigned(FormNewUser) then begin
-     //with TFormNewUser(FormNewUser) do begin
-      AIniFile.WriteInteger('NewUser', 'Left', FormNewUser.Left);
-      AIniFile.WriteInteger('NewUser', 'Top', FormNewUser.Top);
-      AIniFile.WriteInteger('NewUser', 'Width', FormNewUser.Width);
-      AIniFile.WriteInteger('NewUser', 'Height', FormNewUser.Height);
-     //end;
-    //end;
-
+    if CurForm is TFormNewUser then begin
+      with TFormNewUser(CurForm) do begin
+        AIniFile.WriteInteger('NewUser', 'Left', Left);
+        AIniFile.WriteInteger('NewUser', 'Top', Top);
+        AIniFile.WriteInteger('NewUser', 'Width', Width);
+        AIniFile.WriteInteger('NewUser', 'Height', Height);
+      end;
+    end;
   finally
     FreeAndNil(AIniFile);
   end;
@@ -319,12 +334,13 @@ var
   begin
     PosEqual:= Pos('=', Str);
     AIndex:= StrToIntDef(Copy(Str, 1, PosEqual - 1), 0);
-    ARisk:= StrToFloatDef(Copy(Str, PosEqual + 1, 20), 0);  // till end of string
+    ARisk:= StrToFloatDef(Copy(Str, PosEqual + 1, 20), 0) / 100;  // till end of string
   end;
 
 begin
   FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\TableDayRisk.txt';
   AssignFile(F, FileNameStr);
+  Reset(F);
   if IOResult <> 0 then begin
     MessageDlg('Error Loading file ' + FileNameStr, mtError, [mbOk], 0);
     Exit;
@@ -401,6 +417,18 @@ begin
   finally
    // FreeAndNil(SL);
   end;
+end;
+
+procedure CalculateDayLeft(ATodayDate: TDate);
+var TodayDate: TDate;
+begin
+  //TodayDate:= Form1.DateTimePicker1.Date;
+  with CurParameter do begin
+    DailyExpences:= MonthlyExpences / 20.933;   // Check it !!!
+    BusinessDaysLeft:= Trunc(DateofBirth + 85 * 365.25)  - Trunc(ATodayDate);
+    BusinessDaysLeft:= Round(BusinessDaysLeft * 251.2 / 365.25);
+    TodayDayLeft:= BusinessDaysLeft - Round(GoldCapital / DailyExpences);
+  end;  
 end;
 
 procedure MemoLinesAdd(AText: string);

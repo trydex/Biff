@@ -1,17 +1,17 @@
 object Form1: TForm1
-  Left = 917
-  Top = 137
+  Left = 414
+  Top = 114
   Width = 893
-  Height = 667
-  Caption = 'Biff v.3.03'
+  Height = 655
+  Caption = 'Biff v.3.05'
   Color = clBtnFace
+  DefaultMonitor = dmDesktop
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   OldCreateOrder = False
-  Position = poDefault
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -27,9 +27,9 @@ object Form1: TForm1
   object Label7: TLabel
     Left = 16
     Top = 48
-    Width = 59
+    Width = 56
     Height = 13
-    Caption = 'Date of Birth'
+    Caption = 'Today Date'
   end
   object Label6: TLabel
     Left = 16
@@ -76,9 +76,9 @@ object Form1: TForm1
   object Label10: TLabel
     Left = 16
     Top = 288
-    Width = 78
+    Width = 127
     Height = 13
-    Caption = 'Today Days Left'
+    Caption = 'Business Days before Gold'
   end
   object Label4: TLabel
     Left = 16
@@ -98,17 +98,17 @@ object Form1: TForm1
     OnKeyPress = Memo1KeyPress
   end
   object ButtonClearMemo: TButton
-    Left = 136
-    Top = 568
-    Width = 65
+    Left = 344
+    Top = 536
+    Width = 73
     Height = 25
     Caption = 'Clear Memo'
     TabOrder = 1
     OnClick = ButtonClearMemoClick
   end
   object ButtonBestRatio: TButton
-    Left = 16
-    Top = 480
+    Left = 32
+    Top = 536
     Width = 185
     Height = 25
     Caption = 'Find Best Ratio ( VOO / UPRO )'
@@ -117,7 +117,7 @@ object Form1: TForm1
   end
   object StatusBar1: TStatusBar
     Left = 0
-    Top = 610
+    Top = 598
     Width = 877
     Height = 19
     Panels = <
@@ -138,23 +138,25 @@ object Form1: TForm1
     TabOrder = 4
   end
   object ButtonStopFillTable: TButton
-    Left = 16
-    Top = 520
+    Left = 32
+    Top = 568
     Width = 185
     Height = 25
     Caption = 'Abort Fill Table Process'
     TabOrder = 5
+    Visible = False
   end
   object EditScreenName: TEdit
-    Left = 152
+    Left = 160
     Top = 16
     Width = 89
     Height = 21
+    Enabled = False
     TabOrder = 6
     Text = 'User1'
   end
   object DateTimePicker1: TDateTimePicker
-    Left = 152
+    Left = 160
     Top = 48
     Width = 89
     Height = 25
@@ -163,17 +165,18 @@ object Form1: TForm1
     DateMode = dmUpDown
     TabOrder = 7
   end
-  object EditTargetRisk: TEdit
-    Left = 152
+  object EditTodayRisk: TEdit
+    Left = 160
     Top = 80
     Width = 65
     Height = 21
+    Enabled = False
     TabOrder = 8
     Text = '5'
     OnKeyPress = FloatEditKeyPress
   end
   object EditStocks: TEdit
-    Left = 152
+    Left = 160
     Top = 120
     Width = 65
     Height = 21
@@ -182,15 +185,15 @@ object Form1: TForm1
     OnKeyPress = NumericEditKeyPress
   end
   object EditGold: TEdit
-    Left = 152
+    Left = 160
     Top = 152
     Width = 65
     Height = 21
     TabOrder = 10
     Text = '2000'
   end
-  object EditTotalCapital: TEdit
-    Left = 152
+  object EditTotalBankroll: TEdit
+    Left = 160
     Top = 184
     Width = 65
     Height = 21
@@ -199,7 +202,7 @@ object Form1: TForm1
     Text = '0'
   end
   object EditMonthlyExpences: TEdit
-    Left = 152
+    Left = 160
     Top = 216
     Width = 65
     Height = 21
@@ -208,7 +211,7 @@ object Form1: TForm1
     OnKeyPress = FloatEditKeyPress
   end
   object EditBusinessDaysLeft: TEdit
-    Left = 152
+    Left = 160
     Top = 256
     Width = 65
     Height = 21
@@ -217,7 +220,7 @@ object Form1: TForm1
     Text = '2000'
   end
   object EditTodayDayLeft: TEdit
-    Left = 152
+    Left = 160
     Top = 288
     Width = 65
     Height = 21
@@ -232,9 +235,10 @@ object Form1: TForm1
     Height = 17
     Caption = 'I am advanced user'
     TabOrder = 15
+    OnClick = CheckBoxAdvancedClick
   end
   object EditNumSim: TEdit
-    Left = 152
+    Left = 160
     Top = 384
     Width = 65
     Height = 21
@@ -255,7 +259,7 @@ object Form1: TForm1
     TabOrder = 17
   end
   object EditUPROBankr: TEdit
-    Left = 152
+    Left = 160
     Top = 416
     Width = 65
     Height = 21
@@ -263,5 +267,65 @@ object Form1: TForm1
     TabOrder = 18
     Text = '50000'
     OnKeyPress = NumericEditKeyPress
+  end
+  object ButtonRefreshParameter: TButton
+    Left = 32
+    Top = 456
+    Width = 185
+    Height = 25
+    Caption = 'Refresh Parameter'
+    TabOrder = 19
+    OnClick = ButtonRefreshParameterClick
+  end
+  object ButtonCalculateRisk: TButton
+    Left = 32
+    Top = 496
+    Width = 185
+    Height = 25
+    Caption = 'Recalculate Daily Risks'
+    TabOrder = 20
+    OnClick = ButtonCalculateRiskClick
+  end
+  object ListBoxVolGroup: TListBox
+    Left = 264
+    Top = 40
+    Width = 137
+    Height = 305
+    ItemHeight = 13
+    Items.Strings = (
+      ' 1: '
+      ' 2:'
+      ' 3:'
+      ' 4:'
+      ' 5:'
+      ' 6:'
+      ' 7:'
+      ' 8:'
+      ' 9:'
+      '10:'
+      '11:'
+      '12:'
+      '13:'
+      '14:'
+      '15:'
+      '16:'
+      '17:'
+      '18:'
+      '19:'
+      '20:'
+      '21:'
+      '22:'
+      '23:')
+    TabOrder = 21
+  end
+  object Button1: TButton
+    Left = 288
+    Top = 360
+    Width = 97
+    Height = 25
+    Caption = 'Show VolGroup'
+    TabOrder = 22
+    Visible = False
+    OnClick = Button1Click
   end
 end

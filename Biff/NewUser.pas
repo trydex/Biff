@@ -36,7 +36,6 @@ type
     Label10: TLabel;
     EditTodayDayLeft: TEdit;
     CheckBoxShowCalculating: TCheckBox;
-    Button1: TButton;
     procedure ButtonAddNewUserClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure CheckBoxAdvancedClick(Sender: TObject);
@@ -46,7 +45,6 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure NumericEditKeyPress(Sender: TObject; var Key: Char);
     procedure FloatEditKeyPress(Sender: TObject; var Key: Char);
-    procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
   public
@@ -70,6 +68,7 @@ begin
   DateTimePicker1.MinDate:= Date - Round(84 * 365.25);
   //DateTimePicker1.Date:= Date - Round(8 * 365.25);
   CurForm:= Self;
+  LoadIniFile;
   GetParameter;
 end;
 
@@ -100,14 +99,14 @@ begin
     FNumSim:= StrToIntDef(EditNumSim.Text, 25000);
     IsBankruptcy:= CheckBoxBankruptcy.Checked;
     UPROBankr:= StrToIntDef(EditUPROBankr.Text, 50000);
-
+    CalculateDayLeft(Date);
+    {
     DailyExpences:= MonthlyExpences / 20.933;   // Check it !!!
     BusinessDaysLeft:= Trunc(DateofBirth + 85 * 365.25)  - Trunc(Date);
     BusinessDaysLeft:= Round(BusinessDaysLeft * 251.2 / 365.25);
     TodayDayLeft:= BusinessDaysLeft - Round(GoldCapital / DailyExpences);
+   }
     EditBusinessDaysLeft.Text:= IntToStr(BusinessDaysLeft);
-    EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
-    CurProfile:= ScreenName;
     if TodayDayLeft < 0 then begin
       TodayDayLeft:= 0;
       MemoLinesAdd('You will never be broke.');
@@ -116,20 +115,22 @@ begin
       MemoLinesAdd('YOU DON''T NEED BIFF.');
     end;
     EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
+    CurProfile:= ScreenName;
   end;
 
 end;
 
 procedure TFormNewUser.ButtonAddNewUserClick(Sender: TObject);
 begin
-  ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + CurProfile {EditScreenName.Text});
+  CurForm:= Self;
+  ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + EditScreenName.Text);
   GetParameter;
   SaveIniFile;
   SaveProfileIniFile;
   if CurParameter.TodayDayLeft > 0 then
     ButtonCalculateRisk.Enabled:= true
   else
-    ButtonCalculateRisk.Enabled:= false;  
+    ButtonCalculateRisk.Enabled:= false;
 end;
 
 procedure TFormNewUser.ButtonCalculateRiskClick(Sender: TObject);
@@ -144,6 +145,11 @@ end;
 
 procedure TFormNewUser.ButtonGoMainFormClick(Sender: TObject);
 begin
+  CurForm:= Self;
+  SaveIniFile;
+  CurForm:= Form1;
+  LoadIniFile;
+  Form1.SetParameter;
   Form1.Visible:= true;
   Self.Visible:= false;
 end;
@@ -151,9 +157,11 @@ end;
 procedure TFormNewUser.FormCloseQuery(Sender: TObject;
   var CanClose: Boolean);
 begin
-  //SaveIniFile;
-  SaveProfileIniFile;
-
+  if CurForm <> nil then begin
+    SaveIniFile;
+  //  CurForm:= Self;
+    SaveProfileIniFile;
+  end;
   if Assigned(Form1) then  begin
     Form1.IsClosing:= true;
     Form1.Close;
@@ -175,15 +183,6 @@ end;
 procedure TFormNewUser.FloatEditKeyPress(Sender: TObject; var Key: Char);
 begin
   Form1.FloatEditKeyPress(Sender, Key);
-end;
-
-procedure TFormNewUser.Button1Click(Sender: TObject);
-begin
-  CurForm:= Self;
-  Caption:= Caption + 'Left = ' + IntToStr(Left); 
-  MemoLinesAdd(Format('Left = %d ', [Self.Left]));
-  MemoLinesAdd(Format('Top = %d ', [Self.Top]));
-  SaveIniFile;
 end;
 
 
