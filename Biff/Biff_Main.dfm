@@ -1,9 +1,9 @@
 object Form1: TForm1
-  Left = 414
-  Top = 114
+  Left = 880
+  Top = 83
   Width = 893
   Height = 655
-  Caption = 'Biff v.3.05'
+  Caption = 'Biff v.3.06'
   Color = clBtnFace
   DefaultMonitor = dmDesktop
   Font.Charset = DEFAULT_CHARSET

@@ -1,6 +1,6 @@
 object FormNewUser: TFormNewUser
-  Left = 472
-  Top = 164
+  Left = 207
+  Top = 92
   Width = 729
   Height = 621
   Caption = 'New User'
@@ -232,6 +232,7 @@ object FormNewUser: TFormNewUser
     Width = 185
     Height = 25
     Caption = 'Go to Main Window'
+    Enabled = False
     TabOrder = 15
     OnClick = ButtonGoMainFormClick
   end

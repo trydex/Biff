@@ -135,12 +135,10 @@ end;
 
 procedure TFormNewUser.ButtonCalculateRiskClick(Sender: TObject);
 begin
-  with Form1, CurParameter do begin
     GetParameter;
     CurForm:= Self;
-    BestRatioThread := TBestRatioThread.Create(CaseDailyRisk);
-  end;
-  //ButtonGoMainForm.Enabled:= true;
+    Form1.BestRatioThread := TBestRatioThread.Create(CaseDailyRisk);
+  ButtonGoMainForm.Enabled:= true;
 end;
 
 procedure TFormNewUser.ButtonGoMainFormClick(Sender: TObject);
