@@ -4,6 +4,10 @@ interface
 
 uses Windows, Messages, SysUtils, Variants, Classes;
 
+const
+  BiffShortDateFomat = 'dd.mm.yyyy';
+  BiffDateSeparator  = '.';
+
 type
   TUtils = class(TObject)
   private
@@ -38,10 +42,10 @@ function TUtils.StrToDateEx(value: string): TDateTime;
 var  fmt     : TFormatSettings;
      dt      : TDateTime;
 begin
-  fmt.ShortDateFormat:='dd.mm.yyyy';
-  fmt.DateSeparator  :='.';
-  fmt.LongTimeFormat :='hh:nn:ss';
-  fmt.TimeSeparator  :=':';
+  fmt.ShortDateFormat:= BiffShortDateFomat;
+  fmt.DateSeparator  := BiffDateSeparator;
+  fmt.LongTimeFormat := 'hh:nn:ss';
+  fmt.TimeSeparator  := ':';
   result := StrToDate(value, fmt);
 end;
 

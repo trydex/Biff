@@ -102,6 +102,7 @@ type
   end;
 
 var
+  Utils: TUtils;
   CurForm: TForm;
   AllProfiles: TStringList;
   CurProfile: string;
@@ -269,7 +270,7 @@ begin
   try
     with CurParameter do begin
       ScreenName:= AIniFile.ReadString('Parameter', 'ScreenName', 'New User');
-      DateOfBirth:= StrToDate(AIniFile.ReadString('Parameter', 'DateOfBirth', DateToStr(Date)));
+      DateOfBirth:= Utils.StrToDateEx(AIniFile.ReadString('Parameter', 'DateOfBirth', ''));
       TargetRisk:= AIniFile.ReadFloat('Parameter', 'TargetRisk', 0) / 100;
       TodayRisk:= AIniFile.ReadFloat('Parameter', 'TodayRisk', 0) / 100;
       StocksCapital:= AIniFile.ReadFloat('Parameter', 'StocksCapital', 20000);
@@ -301,7 +302,7 @@ begin
   try
    with CurParameter do begin
     AIniFile.WriteString('Parameter', 'ScreenName', ScreenName);
-    AIniFile.WriteString('Parameter', 'DateOfBirth', DateToStr(DateOfBirth));
+    AIniFile.WriteString('Parameter', 'DateOfBirth', FormatDateTime(BiffShortDateFomat, DateOfBirth));
     AIniFile.WriteFloat('Parameter', 'TargetRisk', TargetRisk * 100);
     AIniFile.WriteFloat('Parameter', 'TodayRisk', TodayRisk * 100);
     AIniFile.WriteFloat('Parameter', 'StocksCapital', StocksCapital);

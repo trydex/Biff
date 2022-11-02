@@ -59,6 +59,7 @@ type
 
   private
     { Private declarations }
+    Utils: TUtils;
   public
     BestRatioThread: TBestRatioThread;
     CaclBankruptcyThreads: array of TCaclBankruptcyThread;
@@ -139,7 +140,6 @@ type
 
 var
   Form1: TForm1;
-  Utils: TUtils;
   Terminating : bool;
   //DecimalSeparator : char;
 
