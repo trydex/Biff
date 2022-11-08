@@ -53,7 +53,9 @@ type
   TCalculationCase = (CaseFindBestRatio, CaseDailyRisk, CaseDailyRiskMain, CaseCalcEv);
 
   TArrayReal = array of real;    // for sort array of Total_EV
+  PArrayReal = ^TArrayReal;
   TArrayInt = array of integer;
+  PArrayInt = ^TArrayInt;
 
   TArrVolGroup = array[0..22] of real;
 
@@ -102,6 +104,20 @@ type
     //procedure DoTerminate; override;
   end;
 
+  TCaclulareRiskEvThread = class(TThread)
+  private
+    AStartCapital, ARasxod, AMyBankr: real;
+    ANumDay, ANumSim: integer;
+    ArrBankr: PArrayInt;
+    ArrayEV: PArrayReal;
+    FirstSeed: Cardinal;
+  public
+    constructor Create(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
+    procedure Execute; override;
+    destructor Destroy; override;
+    //procedure DoTerminate; override;
+  end;
+ 
 var
   Utils: TUtils;
   CurForm: TForm;
@@ -160,6 +176,7 @@ begin
  end;
 end;
 
+//================================================
 
 constructor TCaclBankruptcyThread.Create(FirstSeed: Cardinal; CaclBankruptcyAlgo: TCaclBankruptcyAlgo; ANumSim, ANumDay, ACurDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
 begin
@@ -191,6 +208,34 @@ begin
 end;
 
 destructor TCaclBankruptcyThread.Destroy;
+begin
+  inherited;
+end;
+
+//================================================
+
+constructor TCaclulareRiskEvThread.Create(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
+begin
+  inherited create(false);
+  FreeOnTerminate := true;
+  Priority := tpNormal;
+
+  self.FirstSeed := FirstSeed;
+  self.AStartCapital := AStartCapital;
+  self.ARasxod := ARasxod;
+  self.AMyBankr := AMyBankr;
+  self.ANumDay := ANumDay;
+  self.ANumSim := ANumSim;
+  self.ArrBankr := ArrBankr;
+  self.ArrayEV := ArrayEV;
+end;
+
+procedure TCaclulareRiskEvThread.Execute;
+begin
+  Form1.CalculateRiskEVInternal(FirstSeed, AStartCapital, ARasxod, AMyBankr, ANumDay, ANumSim, ArrBankr, ArrayEV);
+end;
+
+destructor TCaclulareRiskEvThread.Destroy;
 begin
   inherited;
 end;

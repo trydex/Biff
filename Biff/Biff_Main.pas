@@ -64,6 +64,7 @@ type
     Utils: TUtils;
   public
     CaclBankruptcyThreads: array of TCaclBankruptcyThread;
+    CaclRiskEvThreads: array of TCaclulareRiskEvThread;
     //IsClosing: bool;
     CalculationIsRuning: bool;
     MaxThreads: integer;
@@ -127,8 +128,8 @@ type
     procedure CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure CalcNumBankruptcySimpleInternal(FirstSeed: Cardinal; ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure qSort(var A: TArrayReal; min, max: Integer);
-    procedure CalculateRiskEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer;
-                                 var ArrBankr: TArrayInt; var ArrayEV: TArrayReal);
+    procedure CalculateRiskEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
+    procedure CalculateRiskEVInternal(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
     procedure CalculateEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
     function CalculateRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer): boolean;
     function CreatePriceDataArray(ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
@@ -1186,25 +1187,70 @@ begin
   SaveTableDayRisk(TableDayRisk);
 end;
 
-procedure TForm1.CalculateRiskEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer;
-                                 var ArrBankr: TArrayInt; var ArrayEV: TArrayReal);
+procedure TForm1.CalculateRiskEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
+var
+  t, threadLimit, stepsThread: integer;
+  handles: array of THandle;
+  currentTicks: Cardinal;
+begin
+  ArrVolGroup:= OrigArrVolGroup;
+  SetLength(ArrayEV^, ANumSim);
+  NumVolGroup:= -1;
+  SetLength(ArrBankr^, ANumDay + 1);
+  currentTicks := GetTickCount();
+
+  threadLimit := 1;//MaxThreads;
+  if threadLimit > ANumSim then
+    threadLimit := ANumSim;
+  SetLength(CaclRiskEvThreads, threadLimit);
+  SetLength(handles, threadLimit);
+  stepsThread := ANumSim div threadLimit; // total number of iterations for each thread
+  
+    // Create threads.
+  for t:= 0 to threadLimit-1 do begin
+    CaclRiskEvThreads[t] := TCaclulareRiskEvThread.Create(currentTicks, AStartCapital, ARasxod, AMyBankr, ANumDay, stepsThread, ArrBankr, ArrayEV);
+    handles[t] := CaclRiskEvThreads[t].Handle;
+    currentTicks := currentTicks + 1;
+  end;
+
+  WaitForMultipleObjects(threadLimit, Pointer(handles), true, INFINITE);
+  Finalize(handles);
+  Finalize(CaclRiskEvThreads);
+  SetLength(CaclRiskEvThreads, 0);
+end;
+
+
+procedure TForm1.CalculateRiskEVInternal(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
 var
   i, k : integer;
   TotalCapital, UPROPart, CurUPROPer, CurVOOPer: real;
-  Seed: Cardinal;
+  RandSeed, Seed: Cardinal;
   ArrPriceData: TArrPriceData;
+
+  function MyRandInt(Range: integer) : integer;
+  asm
+    PUSH    EBX
+    XOR     EBX, EBX
+    IMUL    EDX,[EBX].RandSeed,08088405H
+    INC     EDX
+    MOV     [EBX].RandSeed,EDX
+    MUL     EDX
+    MOV     EAX,EDX
+    POP     EBX
+  end;
 begin
-  ArrVolGroup:= OrigArrVolGroup;
-  Seed := GetTickCount;
-  SetLength(ArrayEV, ANumSim);
-  NumVolGroup:= -1;
-  SetLength(ArrBankr, ANumDay + 1);
-  for i:= 0 to ANumSim - 1 do begin
-    TotalCapital:= AStartCapital;
+  RandSeed := FirstSeed;
+  Seed := GetTickCount();
+
+  for i:= 0 to ANumSim - 1 do
+  begin
+    TotalCapital := AStartCapital;
     ArrPriceData := CreatePriceDataArray(ANumDay, @Seed);
-    for k:= 1 to ANumDay do begin
-      with ArrPriceData[k] do begin
-            // use ArrVolGroup
+    for k:= 1 to ANumDay do
+    begin
+      with ArrPriceData[k] do
+      begin
+         // use ArrVolGroup
          CurUPROPer:= ArrVolGroup[NumGroup];
          CurVOOPer:= 1 - CurUPROPer;
 
@@ -1216,18 +1262,20 @@ begin
            end;
          end;
          TotalCapital:= TotalCapital * (CurVOOPer * VOO + UPROPart) - ARasxod;
-         if TotalCapital <= 0 then begin
+         if TotalCapital <= 0 then
+         begin
            //Inc(UPROBankrot);
            TotalCapital:= 0;
-           Inc(ArrBankr[k]);
+           InterlockedIncrement(ArrBankr^[k]);
            Break;
          end;
       end;
     end;
     //Total_EV:= Total_EV + TotalCapital;
-    ArrayEV[i]:= TotalCapital;
-  end;
+    ArrayEV^[i]:= TotalCapital;
+  end;  
 end;
+
 
 procedure TForm1.CalculateEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
 var i, k, t, N, Index, UPROBankrot: integer;
@@ -1248,7 +1296,7 @@ var i, k, t, N, Index, UPROBankrot: integer;
 begin
   MemoLinesAdd('');
   StartTimer(true, 'Calculate EV ...');
-  CalculateRiskEV(AStartCapital, ARasxod, AMyBankr, ANumDay, ANumSim, ArrBankr, ArrayEV);
+  CalculateRiskEV(AStartCapital, ARasxod, AMyBankr, ANumDay, ANumSim, @ArrBankr, @ArrayEV);
   qSort(ArrayEV, 0, High(ArrayEV));   // 1.39
   //StartTime:= Now - StartTime;
   Total_EV:= 0;
@@ -1313,7 +1361,7 @@ var
   SumaBankr2, Koef: real;
   StartYear, StartDay, CurYear: integer;
 begin
-  CalculateRiskEV(ACapital, ARasxod, AMyBankr, ANumDay, ANumSim, ArrBankr, ArrayEV);
+  CalculateRiskEV(ACapital, ARasxod, AMyBankr, ANumDay, ANumSim, @ArrBankr, @ArrayEV);
   SumaBankr:= 0;
   SumaBankr2:= 0;
   StartYear:= Trunc((Date - CurParameter.DateOfBirth) / 365.25);
