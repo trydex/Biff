@@ -1,9 +1,9 @@
 object Form1: TForm1
-  Left = 880
-  Top = 83
+  Left = 890
+  Top = 179
   Width = 893
-  Height = 655
-  Caption = 'Biff v.3.06'
+  Height = 663
+  Caption = 'Biff v.3.09'
   Color = clBtnFace
   DefaultMonitor = dmDesktop
   Font.Charset = DEFAULT_CHARSET
@@ -34,9 +34,9 @@ object Form1: TForm1
   object Label6: TLabel
     Left = 16
     Top = 80
-    Width = 132
+    Width = 81
     Height = 13
-    Caption = 'Acceptable Risk of Ruin (%)'
+    Caption = 'Today'#39' s Risk (%)'
   end
   object Label1: TLabel
     Left = 16
@@ -99,7 +99,7 @@ object Form1: TForm1
   end
   object ButtonClearMemo: TButton
     Left = 344
-    Top = 536
+    Top = 528
     Width = 73
     Height = 25
     Caption = 'Clear Memo'
@@ -108,16 +108,16 @@ object Form1: TForm1
   end
   object ButtonBestRatio: TButton
     Left = 32
-    Top = 536
+    Top = 528
     Width = 185
     Height = 25
-    Caption = 'Find Best Ratio ( VOO / UPRO )'
+    Caption = 'Find Best Ratio ( UPRO / VOO )'
     TabOrder = 2
     OnClick = ButtonBestRatioClick
   end
   object StatusBar1: TStatusBar
     Left = 0
-    Top = 598
+    Top = 606
     Width = 877
     Height = 19
     Panels = <
@@ -138,7 +138,7 @@ object Form1: TForm1
     TabOrder = 4
   end
   object ButtonStopFillTable: TButton
-    Left = 32
+    Left = 232
     Top = 568
     Width = 185
     Height = 25
@@ -270,7 +270,7 @@ object Form1: TForm1
   end
   object ButtonRefreshParameter: TButton
     Left = 32
-    Top = 456
+    Top = 448
     Width = 185
     Height = 25
     Caption = 'Refresh Parameter'
@@ -279,7 +279,7 @@ object Form1: TForm1
   end
   object ButtonCalculateRisk: TButton
     Left = 32
-    Top = 496
+    Top = 488
     Width = 185
     Height = 25
     Caption = 'Recalculate Daily Risks'
@@ -318,14 +318,18 @@ object Form1: TForm1
       '23:')
     TabOrder = 21
   end
-  object Button1: TButton
-    Left = 288
-    Top = 360
-    Width = 97
+  object ButtonCalculateEV: TButton
+    Left = 32
+    Top = 568
+    Width = 185
     Height = 25
-    Caption = 'Show VolGroup'
+    Caption = 'Calculate EV'
     TabOrder = 22
-    Visible = False
-    OnClick = Button1Click
+    OnClick = ButtonCalculateEVClick
+  end
+  object Timer1: TTimer
+    OnTimer = Timer1Timer
+    Left = 808
+    Top = 24
   end
 end

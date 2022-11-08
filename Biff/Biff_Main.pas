@@ -41,7 +41,8 @@ type
     ButtonRefreshParameter: TButton;
     ButtonCalculateRisk: TButton;
     ListBoxVolGroup: TListBox;
-    Button1: TButton;
+    Timer1: TTimer;
+    ButtonCalculateEV: TButton;
     procedure FormCreate(Sender: TObject);
     procedure ButtonClearMemoClick(Sender: TObject);
   //  procedure ButtonUPROClick(Sender: TObject);
@@ -54,8 +55,9 @@ type
     procedure FloatEditKeyPress(Sender: TObject; var Key: Char);
     procedure ButtonRefreshParameterClick(Sender: TObject);
     procedure ButtonCalculateRiskClick(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
     procedure CheckBoxAdvancedClick(Sender: TObject);
+    procedure Timer1Timer(Sender: TObject);
+    procedure ButtonCalculateEVClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -105,12 +107,11 @@ type
     function GetDirectoryName(NumGroup: integer): string;
     procedure GetProbDeath;
     procedure GetProbDeathArr;
-    //procedure GetAllParameter;
-    procedure GetMainParameter;
+    //procedure GetMainParameter;
+    function GetMainParameter: boolean;
     procedure SetParameter;
     procedure SetLogFileName;
     procedure SaveLog;
-    //procedure CalculateEV;
     procedure CalculateDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
     procedure CreateTableDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
     procedure FindBestRatioThreadSwitcher(ThreadCase: TBestRatioCase);
@@ -118,23 +119,27 @@ type
     function FindBestRatio(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
     function FindBestRatio_12DayVol(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
     function FindBestRatio_12DayVol2(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
+    procedure CalculateBestRatioMain();
     procedure CalculateRiskForNewUser();
-    procedure SomeProcedureForm3();
+    procedure CalculateRiskForMain();
 
   //  function FindBestRatioAdv(ACapital, ARasxod, APercent: real; ANumDay, ANumSim, AStepDay: integer): integer;  // Result 0..100 Perc for UPRO
  //   procedure CalcNumBankruptcyAdvInternal(FirstSeed: Cardinal; AInnerNumSim, ANumDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure CalcNumBankruptcySimpleInternal(FirstSeed: Cardinal; ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure qSort(var A: TArrayReal; min, max: Integer);
-
+    procedure CalculateRiskEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer;
+                                 var ArrBankr: TArrayInt; var ArrayEV: TArrayReal);
+    procedure CalculateEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
+    function CalculateRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer): boolean;
     function CreatePriceDataArray(ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
-//    function BacktestPriceDataArray(AFromDay, ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
-
     function CorrectArrVolGroup(FArrVolGroup: TArrVolGroup; Delta: real): TArrVolGroup;
     function CreateArrVolGroup(APercent: real): TArrVolGroup;
     procedure ShowArrVolGroup(AArrVolGroup: TArrVolGroup);
     procedure ShowArrVolGroupForm(AArrVolGroup: TArrVolGroup);
-    function NotEmpty(AArrVolGroup: TArrVolGroup): boolean;
+   // function NotEmpty(AArrVolGroup: TArrVolGroup): boolean;
+    procedure StartTimer(Restart: boolean; AStr: string);
+    procedure StopTimer(AStr: string);
 
  end;
 
@@ -174,6 +179,7 @@ begin
       LoadTableDayRisk(TableDayRisk);
       LoadProfileIniFile;
       SetParameter;
+      GetMainParameter;;
       CanShow:= true;
       //Self.Visible:= true;
     end else if FormLogin.ModalResult = mrAbort then begin
@@ -851,32 +857,21 @@ begin
   end;
 end;
 
-function TForm1.NotEmpty(AArrVolGroup: TArrVolGroup): boolean;
-var i: integer;
-begin
-  Result:= false;
-  for i:= 0 to 22 do begin
-    if AArrVolGroup[i] > 0 then begin
-      Result:= true;
-      Exit;
-    end;
-  end;
-end;
-
 procedure TForm1.ButtonBestRatioClick(Sender: TObject);
 begin
   ProgressBar.Position := 0;
-  GetMainParameter;
-  CurForm:= Self;
-  BestRatioThread := TBestRatioThread.Create(CaseFindBestRatio);
+  if GetMainParameter then begin;
+    CurForm:= Self;
+    BestRatioThread := TBestRatioThread.Create(CaseFindBestRatio);
+  end;
 end;
 
 procedure TForm1.FindBestRatioThreadSwitcher(ThreadCase: TBestRatioCase);
 begin
   case ThreadCase of
-	  CaseFindBestRatio : FindBestRatioProcedure();
+	  CaseFindBestRatio : CalculateBestRatioMain;  //FindBestRatioProcedure();
 	  CaseDailyRisk : CalculateRiskForNewUser();
-    CaseSomeNameForm3 : SomeProcedureForm3();
+    CaseDailyRiskMain : CalculateRiskForMain();
 	else
     ShowMessage('Unsupported case, please update ThreadCase type');
   end;
@@ -890,6 +885,7 @@ begin
     with CurParameter do begin
       MemoLinesAdd('Start...');
       OrigArrVolGroup:= CreateArrVolGroup(TodayRisk);
+      OrigArrVolGroup:= SmoothingArrVolGroup(OrigArrVolGroup);
       MemoLinesAdd('Original Array of Volatility Group:');
       ShowArrVolGroup(OrigArrVolGroup);
         //BestRatio:= FindBestRatio_12DayVol(StartCapital, Rasxod, MyBankr, NumDay, NumSim);
@@ -904,12 +900,29 @@ begin
  // EditUPROPer.Text:= FloatToStr(BestRatio * 100 / MaxI);
 end;
 
+procedure TForm1.CalculateBestRatioMain();
+begin
+    Memo1.Lines.Add('');
+    StartTimer(true, 'Calculating Best Ratio ( UPRO / VOO ) ...');
+    FindBestRatioProcedure();
+    Memo1.Lines.Add('');
+    StopTimer('Calculating finished.');
+end;
+
 procedure TForm1.CalculateRiskForNewUser();
 begin
-  //with CurParameter, FormNewUser do begin
-  with CurParameter, CurForm do begin
+  with CurParameter, FormNewUser do begin
+   { Memo1.Lines.Add('');
+    Memo1.Lines.Add('Calculate min risk for your parameter ...');
+
+    if CalculateRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim ) then begin
+      Memo1.Lines.Add('');
+      Memo1.Lines.Add('Calculating is finished.');
+      Exit;
+    end;
+    }
+    StartTimer(true, 'Calculate Daily Risks ...');
     TodayRisk:= TargetRisk;
-    //MemoLinesAdd(Format('TodayRisk = %f',[TodayRisk * 100]));
     Memo1.Lines.Add('');
     Memo1.Lines.Add('Calculate 1 / 4 ...');
     Memo1.Lines.Add(Format('Find ratio for 23 groups when Risk = %f',[TodayRisk * 100]));
@@ -937,11 +950,27 @@ begin
     FormNewUser.ButtonGoMainForm.Enabled:= true;
   end;
   ShowArrVolGroupForm(ArrVolGroup);
+  StopTimer('Calculate Daily Risks finished.');
 end;
 
-procedure TForm1.SomeProcedureForm3();
+procedure TForm1.CalculateRiskForMain();
 begin
   //TODO: write code here.
+  with CurParameter, Form1 do begin
+    Memo1.Lines.Add('');
+    Memo1.Lines.Add('Calculate 1 / 2 ...');
+    Memo1.Lines.Add(Format('Find ratio for 23 groups when Risk = %f',[TodayRisk * 100]));
+    //MemoLinesAdd(Format('TodayRisk = %f',[TodayRisk * 100]));
+    FindBestRatioProcedure();
+    ShowArrVolGroupForm(ArrVolGroup);
+    Memo1.Lines.Add('');
+    Memo1.Lines.Add('Calculate 2 / 2 ...');
+    Memo1.Lines.Add(Format('Create table of days risk when Risk = %f',[TodayRisk * 100]));
+    CreateTableDayRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 10);
+    Memo1.Lines.Add('');
+    Memo1.Lines.Add('All calculating is finished.');
+  end;  
+
 end;
 
 
@@ -990,7 +1019,7 @@ begin
              if Random(UPROBankr) = 0 then
                UPROPart:= 0;
            end;
-         end;  
+         end;
          TotalCapital:= TotalCapital * (CurVOOPer * VOO + UPROPart) - ARasxod;
          //if CheckBoxShowStat.Checked then begin
          //  Memo1.Lines.Add(Format('Day: %d   %s   %.6f %.3f   %.6f %.3f   %.6f   %d   %.2f',
@@ -1041,11 +1070,9 @@ begin
   StartDay:= Round(StartDay * 251.2 / 365.25);
   for t:=1 to High(ArrBankr) do begin
     SumaBankr:= SumaBankr + ArrBankr[t];
-    //SumaBankr2:= SumaBankr2 + ArrBankr[t] * ArrProbDeath[t div 251];
     CurYear:= Trunc((t + StartDay) / 251.2);
     SumaBankr2:= SumaBankr2 + ArrBankr[t] * ArrProbDeath2[StartYear][CurYear];
-    //MemoLinesAdd(Format('Day  %d:  %.6f', [t, ArrProbDeath2[StartYear][CurYear]]));
-    if (t mod 100) = 0 then begin
+    if ((t mod 100) = 0) or (t = High(ArrBankr)) then begin
       MemoLinesAdd(Format('Day: %d, Bankruptcy: %.3f, with ProbDeath: %.3f',
        [t,(SumaBankr) * 100 / ANumSim, (SumaBankr2) * 100 / ANumSim])) ;
     end;
@@ -1104,7 +1131,7 @@ begin
              if Random(UPROBankr) = 0 then
                UPROPart:= 0;
            end;
-         end;  
+         end;
          TotalCapital:= TotalCapital * (CurVOOPer * VOO + UPROPart) - ARasxod;
          //if CheckBoxShowStat.Checked then begin
          //  Memo1.Lines.Add(Format('Day: %d   %s   %.6f %.3f   %.6f %.3f   %.6f   %d   %.2f',
@@ -1132,13 +1159,13 @@ begin
     SumaBankr:= SumaBankr + ArrBankr[t];
     CurYear:= Trunc((t + StartDay) / 251.2);
     SumaBankr2:= SumaBankr2 + ArrBankr[t] * ArrProbDeath2[StartYear][CurYear];
-    if (t mod 100) = 0 then begin
+    if ((t mod 100) = 0) or (t = High(ArrBankr)) then begin
       MemoLinesAdd(Format('Day: %d, Bankruptcy: %.3f, with ProbDeath: %.3f',
        [t,(SumaBankr) * 100 / ANumSim, (SumaBankr2) * 100 / ANumSim])) ;
     end;
   end;
-  //SumaBankr:= SumaBankr / ANumSim;
-  Koef:= AMyBankr / (SumaBankr / ANumSim) ;
+//  Koef:= AMyBankr / (SumaBankr / ANumSim) ;           // old
+  Koef:= CurParameter.TargetRisk / (SumaBankr2 / ANumSim);  // new
   SumaBankr:= 0;
   SumaBankr2:= 0;
   MemoLinesAdd(Format('Koef = %.4f', [Koef]));
@@ -1147,7 +1174,7 @@ begin
     CurYear:= Trunc((t + StartDay) / 251.2);
     SumaBankr2:= SumaBankr2 + ArrBankr[t] * ArrProbDeath2[StartYear][CurYear];
     ArrBankrReal[t]:= (SumaBankr * Koef) / ANumSim;
-    if (t mod 100) = 0 then begin
+    if ((t mod 100) = 0) or (t = High(ArrBankr)) then begin
       MemoLinesAdd(Format('Day: %d, Bankruptcy: %.3f, with ProbDeath: %.3f',
        [t,(SumaBankr * Koef) * 100 / ANumSim, (SumaBankr2 * Koef) * 100 / ANumSim])) ;
     end;
@@ -1157,16 +1184,188 @@ begin
     MemoLinesAdd(Format('Day: %d , Risk: %.4f ', [t, TableDayRisk[t] * 100]));
   end;
   SaveTableDayRisk(TableDayRisk);
-  //Memo1.Lines.Add(Format('Bankruptcy with ProbDeath: %f ', [(SumaBankr2) * 100 / NumSim])) ;
 end;
 
-procedure TForm1.GetMainParameter;
+procedure TForm1.CalculateRiskEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer;
+                                 var ArrBankr: TArrayInt; var ArrayEV: TArrayReal);
+var
+  i, k : integer;
+  TotalCapital, UPROPart, CurUPROPer, CurVOOPer: real;
+  Seed: Cardinal;
+  ArrPriceData: TArrPriceData;
+begin
+  ArrVolGroup:= OrigArrVolGroup;
+  Seed := GetTickCount;
+  SetLength(ArrayEV, ANumSim);
+  NumVolGroup:= -1;
+  SetLength(ArrBankr, ANumDay + 1);
+  for i:= 0 to ANumSim - 1 do begin
+    TotalCapital:= AStartCapital;
+    ArrPriceData := CreatePriceDataArray(ANumDay, @Seed);
+    for k:= 1 to ANumDay do begin
+      with ArrPriceData[k] do begin
+            // use ArrVolGroup
+         CurUPROPer:= ArrVolGroup[NumGroup];
+         CurVOOPer:= 1 - CurUPROPer;
+
+         UPROPart:= CurUPROPer * UPRO;
+         with CurParameter do begin
+           if IsBankruptcy then begin
+             if Random(UPROBankr) = 0 then
+               UPROPart:= 0;
+           end;
+         end;
+         TotalCapital:= TotalCapital * (CurVOOPer * VOO + UPROPart) - ARasxod;
+         if TotalCapital <= 0 then begin
+           //Inc(UPROBankrot);
+           TotalCapital:= 0;
+           Inc(ArrBankr[k]);
+           Break;
+         end;
+      end;
+    end;
+    //Total_EV:= Total_EV + TotalCapital;
+    ArrayEV[i]:= TotalCapital;
+  end;
+end;
+
+procedure TForm1.CalculateEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
+var i, k, t, N, Index, UPROBankrot: integer;
+  TotalCapital: real;
+  UPROPart: real;
+  Total_EV, Total_Day: real;
+  StartTime: TdateTime;
+  ArrayEV: TArrayReal;  // 1.39
+  CurPercentile: real;
+  Seed: Cardinal;
+  CurUPROPer, CurVOOPer: real;
+  ArrPriceData: TArrPriceData;
+ // StatVolGroup: array[0..22] of Longint;
+  ArrBankr: TArrayInt;
+  SumaBankr: Longint;
+  SumaBankr2, Koef: real;
+  StartYear, StartDay, CurYear: integer;
+begin
+  MemoLinesAdd('');
+  StartTimer(true, 'Calculate EV ...');
+  CalculateRiskEV(AStartCapital, ARasxod, AMyBankr, ANumDay, ANumSim, ArrBankr, ArrayEV);
+  qSort(ArrayEV, 0, High(ArrayEV));   // 1.39
+  //StartTime:= Now - StartTime;
+  Total_EV:= 0;
+  for i:= 0 to High(ArrayEV) do begin
+    Total_EV:= Total_EV + ArrayEV[i];
+  end;
+  //Total_EV:= Total_EV / ANumSim;
+  Total_EV:= Total_EV / Length(ArrayEV);
+  Total_Day:= Power(Total_EV / AStartCapital, 1 / ANumDay);;
+  Total_Day:= (Total_Day - 1) * 100;  // in percent
+
+  MemoLinesAdd(Format('EV:  Total: %f ', [Total_EV]));
+  MemoLinesAdd(Format('EV daily:  %.6f ', [Total_Day]));
+  //Memo1.Lines.Add(Format('Bankruptcy:  %d ( %f ) ', [UPROBankrot, UPROBankrot * 100 / NumSim]));
+  MemoLinesAdd('');
+
+  CurPercentile:= ArrayEV[((10 * ANumSim) div 100) - 1];
+  MemoLinesAdd(Format('10th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= ArrayEV[((25 * ANumSim) div 100) - 1];
+  MemoLinesAdd(Format('25th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= ArrayEV[((50 * ANumSim) div 100) - 1];
+  MemoLinesAdd(Format('50th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= ArrayEV[((75 * ANumSim) div 100) - 1];
+  MemoLinesAdd(Format('75th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+  CurPercentile:= ArrayEV[((90 * ANumSim) div 100) - 1];
+  MemoLinesAdd(Format('90th Percentile: %f    %f  EV', [CurPercentile, CurPercentile * 100 / Total_EV ]));
+
+
+  SumaBankr:= 0;
+  MemoLinesAdd('');
+  StartYear:= Trunc((Date - CurParameter.DateOfBirth) / 365.25);
+  StartDay:= Trunc(Date - CurParameter.DateOfBirth - StartYear * 365.25);
+  StartDay:= Round(StartDay * 251.2 / 365.25);
+  for t:=1 to High(ArrBankr) do begin
+    SumaBankr:= SumaBankr + ArrBankr[t];
+    CurYear:= Trunc((t + StartDay) / 251.2);
+    SumaBankr2:= SumaBankr2 + ArrBankr[t] * ArrProbDeath2[StartYear][CurYear];
+    //if (t mod 100) = 0 then begin
+    if t = High(ArrBankr) then begin
+      MemoLinesAdd(Format('Day: %d, Bankruptcy: %.3f, with ProbDeath: %.3f',
+       [t,(SumaBankr) * 100 / ANumSim, (SumaBankr2) * 100 / ANumSim])) ;
+    end;
+  end;
+  Koef:= SumaBankr / SumaBankr2;
+  //Memo1.Lines.Add(Format('Bankruptcy with ProbDeath: %f ', [(SumaBankr2) * 100 / NumSim])) ;
+   StopTimer('Calculate EV Finished.');
+end;
+
+
+function TForm1.CalculateRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer): boolean;
+var
+  CurRisk: real;
+  i: integer;
+  CurCapital, First, Last: real;
+  
+function GetRiskCapital(ACapital: real): real;   // inner function
+var
+  t: integer;
+  ArrayEV: TArrayReal;  // 1.39
+  ArrBankr: TArrayInt;
+  SumaBankr: Longint;
+  SumaBankr2, Koef: real;
+  StartYear, StartDay, CurYear: integer;
+begin
+  CalculateRiskEV(ACapital, ARasxod, AMyBankr, ANumDay, ANumSim, ArrBankr, ArrayEV);
+  SumaBankr:= 0;
+  SumaBankr2:= 0;
+  StartYear:= Trunc((Date - CurParameter.DateOfBirth) / 365.25);
+  StartDay:= Trunc(Date - CurParameter.DateOfBirth - StartYear * 365.25);
+  StartDay:= Round(StartDay * 251.2 / 365.25);
+  for t:=1 to High(ArrBankr) do begin
+    //SumaBankr:= SumaBankr + ArrBankr[t];
+    CurYear:= Trunc((t + StartDay) / 251.2);
+    SumaBankr2:= SumaBankr2 + ArrBankr[t] * ArrProbDeath2[StartYear][CurYear];
+  end;
+  Result:= SumaBankr2 / AnumSim;
+end;     // end inner function
+
+begin    // main function
+  MemoLinesAdd('');
+  for i:= 0 to 22 do begin
+    ArrVolGroup[i]:= 0;
+  end;
+  CurRisk:= GetRiskCapital(AStartCapital);
+  MemoLinesAdd(Format('For Capital = %.0f , Risk = %f ', [AStartCapital, CurRisk * 100]));
+  Result:= false;
+  if CurRisk < AMyBankr then Exit;
+  Result:= true;
+  if MessageDlg('You Stocks Capital is too small. '
+                + 'Do you want calculate minimum needed capital?' , mtCustom, [mbYes, mbNo], 0) = mrYes then begin
+
+    First:= AStartCapital;
+    Last:= ARasxod * ANumDay;
+
+    while Abs(Last - First) > ARasxod * 20.9  do begin
+      if Terminating then
+        Break;
+
+      CurCapital:= (First + Last) / 2;
+      CurRisk:= GetRiskCapital(CurCapital);
+      MemoLinesAdd(Format('For Capital = %.0f , Risk = %f ', [CurCapital, CurRisk * 100]));
+      if CurRisk < AMyBankr then begin
+        Last:= CurCapital;
+      end else begin
+        First:= CurCapital;
+      end;
+    end;   //while
+
+    MemoLinesAdd(Format('Min Capital = %.0f ', [Last]));
+
+  end;
+end;
+
+function TForm1.GetMainParameter: boolean;
 begin
   with CurParameter do begin
-//    ScreenName:= EditScreenName.Text;
-//    DateofBirth:= DateTimePicker1.Date;
-//    TargetRisk:= StrToFloatDef(EditTargetRisk.Text, 5) / 100;
-//    TodayRisk:= TargetRisk;
+    Result:= false;
     StocksCapital:= StrToFloatDef(EditStocks.Text, 0);
     GoldCapital:= StrToFloatDef(EditGold.Text, 0);
     TotalBankroll:= StocksCapital + GoldCapital;
@@ -1176,13 +1375,8 @@ begin
     FNumSim:= StrToIntDef(EditNumSim.Text, 25000);
     IsBankruptcy:= CheckBoxBankruptcy.Checked;
     UPROBankr:= StrToIntDef(EditUPROBankr.Text, 50000);
+
     CalculateDayLeft(DateTimePicker1.Date);
-  {
-    DailyExpences:= MonthlyExpences / 20.933;   // Check it !!!
-    BusinessDaysLeft:= Trunc(DateofBirth + 85 * 365.25)  - Trunc(Date);
-    BusinessDaysLeft:= Round(BusinessDaysLeft * 251.2 / 365.25);
-    TodayDayLeft:= BusinessDaysLeft - Round(GoldCapital / DailyExpences);
-   }
     EditBusinessDaysLeft.Text:= IntToStr(BusinessDaysLeft);
     EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
     CurProfile:= ScreenName;
@@ -1192,15 +1386,14 @@ begin
       MemoLinesAdd('Your gold assets are enough for the rest of your life.');
       MemoLinesAdd('Invest all your stock money to UPRO and have fun.');
       MemoLinesAdd('YOU DON''T NEED BIFF.');
-    end else if TodayDayLeft > High(TableDayRisk) then begin
+    end else if BusinessDaysLeft > High(TableDayRisk) then begin
       MemoLinesAdd('');
       MemoLinesAdd('Today Risk not finded.');
       MemoLinesAdd('First of all create Table Day Risk.');
     end else begin
-      TodayRisk:= TableDayRisk[TodayDayLeft] ;
-//      EditTodayRisk.Text:= FloatToStr(TodayRisk * 100);
+      TodayRisk:= TableDayRisk[BusinessDaysLeft] ;
       EditTodayRisk.Text:= Format('%f', [TodayRisk * 100]);
-
+      Result:= true;
     end;
     EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
   end;
@@ -1228,7 +1421,7 @@ begin
     EditBusinessDaysLeft.Text:= IntToStr(BusinessDaysLeft);
     EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
   end;
-  GetMainParameter;  // ???
+  //GetMainParameter;  // ???
 end;
 
 procedure TForm1.ShowArrVolGroupForm(AArrVolGroup: TArrVolGroup);
@@ -1240,17 +1433,18 @@ begin
     for i:= 0 to 22 do begin
       Items[i]:= Format(' %2d:  %2.2F' + '%', [i+1, AArrVolGroup[i] * 100]);
     end;
-  end;    
+  end;
+  SaveArrVolGroup(AArrVolGroup);
 end;
 
 procedure TForm1.EnableControls(enable: bool);
 begin
   if Terminating then
     Exit;
-{  Form1.ButtonBestRatio.Enabled := enable;
-  Form1.ButtonFillTable.Enabled := enable;
-  Form1.ButtonUPRO.Enabled := enable;
-  }
+        ButtonRefreshParameter.Enabled:= enable;
+        ButtonCalculateRisk .Enabled:= enable;
+        ButtonBestRatio.Enabled:= enable;
+        ButtonClearMemo.Enabled:= enable;
 end;
 
 procedure TForm1.WMUpdatePB(var msg: TMessage);
@@ -1338,16 +1532,16 @@ begin
 //  with Form1, CurParameter do begin
   if MessageDlg('You should recalculate daily risks only if your parameter is changed a lot. '
                 + 'Do you really want to recalculate?' , mtCustom, [mbYes, mbNo], 0) = mrYes then begin
-    GetMainParameter;
-    CurForm:= Self;
-    BestRatioThread := TBestRatioThread.Create(CaseDailyRisk);
+    if GetMainParameter then begin
+      CurForm:= Self;
+      Memo1.Lines.Add('');
+      StartTimer(true, 'Calculating Table of Days Risk ...');
+
+      BestRatioThread := TBestRatioThread.Create(CaseDailyRiskMain);
+    end;  
   end;
 end;
 
-procedure TForm1.Button1Click(Sender: TObject);
-begin
-  ShowArrVolGroupForm(ArrVolGroup);
-end;
 
 procedure TForm1.CheckBoxAdvancedClick(Sender: TObject);
 var IsEnabled: boolean;
@@ -1357,5 +1551,73 @@ begin
   EditUPROBankr.Enabled:= IsEnabled;
   CheckBoxBankruptcy.Enabled:= IsEnabled;
 end;
+
+procedure TForm1.Timer1Timer(Sender: TObject);
+begin
+  if CurForm is TForm1 then begin
+    with TForm1(CurForm) do begin
+      if Timer1.Enabled then begin
+        StatusBar1.Panels[0].Text:= TimeToStr(Now - StartTimeTimer);
+      end;
+    end;  
+  end else if CurForm is TFormNewUser then begin
+    with TFormNewUser(CurForm) do begin
+      if Timer1.Enabled then begin
+        StatusBar1.Panels[0].Text:= TimeToStr(Now - StartTimeTimer);
+      end;
+    end;
+  end;
+{
+  if Timer1.Enabled then begin
+    StatusBar1.Panels[0].Text:= TimeToStr(Now - StartTimeTimer);
+  end else begin
+    //StatusBar1.Panels[0].Text:= '';
+  end;}
+end;
+
+procedure TForm1.StartTimer(Restart: boolean; AStr: string);
+begin
+  if CurForm is TForm1 then begin
+    with TForm1(CurForm) do begin
+      StatusBar1.Panels[1].Text:= AStr;
+      Memo1.Lines.Add(AStr);
+    end;
+  end else if CurForm is TFormNewUser then begin
+    with TFormNewUser(CurForm) do begin
+      StatusBar1.Panels[1].Text:= AStr;
+      Memo1.Lines.Add(AStr);
+    end;
+  end;
+  Timer1.Enabled:= true;
+  if Restart then
+    StartTimeTimer:= Now;
+end;
+
+procedure TForm1.StopTimer(AStr: string);
+begin
+  if CurForm is TForm1 then begin
+    with TForm1(CurForm) do begin
+      StatusBar1.Panels[1].Text:= AStr;
+      Memo1.Lines.Add(AStr);
+    end;
+  end else if CurForm is TFormNewUser then begin
+    with TFormNewUser(CurForm) do begin
+      StatusBar1.Panels[1].Text:= AStr;
+      Memo1.Lines.Add(AStr);
+    end;
+  end;
+//  StatusBar1.Panels[1].Text:= AStr;
+//  Memo1.Lines.Add(AStr);
+  Timer1.Enabled:= false;
+end;
+
+
+procedure TForm1.ButtonCalculateEVClick(Sender: TObject);
+begin
+  with CurParameter do begin
+    CalculateEV(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 10);
+  end;  
+end;
+
 
 end.

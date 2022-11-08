@@ -50,9 +50,10 @@ type
 
   TCaclBankruptcyAlgo = (AlgoSimple, AlgoAdvanced, AlgoExtra);
 
-  TBestRatioCase = (CaseFindBestRatio, CaseDailyRisk, CaseSomeNameForm3);
+  TBestRatioCase = (CaseFindBestRatio, CaseDailyRisk, CaseDailyRiskMain);
 
   TArrayReal = array of real;    // for sort array of Total_EV
+  TArrayInt = array of integer;
 
   TArrVolGroup = array[0..22] of real;
 
@@ -108,6 +109,7 @@ var
   CurProfile: string;
   CurParameter: TParameter;
   TableDayRisk: TArrayReal;
+  StartTimeTimer: TDateTime;
 
  // procedure FindBestRatioProcedure();
   procedure LoadIniFile;
@@ -119,8 +121,12 @@ var
   procedure MemoLinesAdd(AText: string);
   procedure LoadTableDayRisk(var ATable: TArrayReal);
   procedure SaveTableDayRisk(ATable: TArrayReal);
+  procedure SaveArrVolGroup(AArrVolGroup: TArrVolGroup);
   procedure AddToTableDayRisk(var ATable: TArrayReal; ADayRisk: TArrayReal);
   procedure CalculateDayLeft(ATodayDate: TDate);
+  function SetProfileTableName: string;
+  function SmoothingArrVolGroup(AArrVolGroup: TArrVolGroup): TArrVolGroup;
+  procedure EnableControls(enable: bool);
 
 implementation
 
@@ -140,7 +146,7 @@ end;
 procedure TBestRatioThread.Execute;
 begin
   with Form1 do begin  // Old Form1
-    //EnableControls(false);
+    EnableControls(false);
     FindBestRatioThreadSwitcher(self.ThreadCase);
   end;
 end;
@@ -149,7 +155,7 @@ procedure TBestRatioThread.DoTerminate;
 begin
  with Form1 do begin  // Old Form1
   if Terminating = false then
-    //EnableControls(true);
+    EnableControls(true);
   inherited
  end;
 end;
@@ -341,7 +347,9 @@ var
 begin
   FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\TableDayRisk.txt';
   AssignFile(F, FileNameStr);
+  {$I-}
   Reset(F);
+  {$I+}
   if IOResult <> 0 then begin
     MessageDlg('Error Loading file ' + FileNameStr, mtError, [mbOk], 0);
     Exit;
@@ -362,8 +370,9 @@ end;
 procedure SaveTableDayRisk(ATable: TArrayReal);
 var
   F: TextFile;
-  S, FileNameStr: string;
+  S, FileNameStr, ArchiveNameStr: string;
   i: integer;
+  CurDate, DeathDate: TDate;
 begin
   FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\TableDayRisk.txt';
   AssignFile(F, FileNameStr);
@@ -373,15 +382,50 @@ begin
     writeln(F, S);
   end;
   CloseFile(F);
+
+  ArchiveNameStr:= ExtractFilePath(GetModuleName(0)) + '\Profiles\' + CurProfile + '\Archive Tables';
+  ForceDirectories(ArchiveNameStr);
+  ArchiveNameStr:= ArchiveNameStr + '\' + SetProfileTableName;
+  AssignFile(F, ArchiveNameStr);
+  Rewrite(F);
+  DeathDate:= Round(CurParameter.DateOfBirth + 85 * 365.25);
+  for i:= High(ATable) downto 0 do begin
+    CurDate:= Round(DeathDate - i * 365.25 / 251.2);
+    S:= FormatDateTime(BiffShortDateFomat, CurDate) + ' ';
+    S:= S + IntToStr(i) + '=' + Format('%.4f', [ATable[i] * 100]);
+    writeln(F, S);
+  end;
+  CloseFile(F);
 end;
+
+procedure SaveArrVolGroup(AArrVolGroup: TArrVolGroup);
+var
+  F: TextFile;
+  S, ArchiveNameStr: string;
+  i: integer;
+begin
+  ArchiveNameStr:= ExtractFilePath(GetModuleName(0)) + '\Profiles\' + CurProfile + '\Archive Ratio';
+  ForceDirectories(ArchiveNameStr);
+  ArchiveNameStr:= ArchiveNameStr + '\' + SetProfileTableName;
+  AssignFile(F, ArchiveNameStr);
+  Rewrite(F);
+  for i:= 0 to High(AArrVolGroup) do begin
+    S:= Format(' %2d:  %2.2F' , [i+1, AArrVolGroup[i] * 100]);
+    writeln(F, S);
+  end;
+  CloseFile(F);
+end;
+
 
 procedure AddToTableDayRisk(var ATable: TArrayReal; ADayRisk: TArrayReal);
 var i, Day: integer;
 begin
   with CurParameter do begin
-    if Length(ATable) < (BusinessDaysLeft + 1) then begin
-      SetLength(ATable, BusinessDaysLeft + 1) ; //Length(ADayRisk));
-    end;
+   // if Length(ATable) < (BusinessDaysLeft + 1) then begin
+   //   SetLength(ATable, BusinessDaysLeft + 1) ; //Length(ADayRisk));
+   // end;
+    TodayRisk:= ADayRisk[High(ADayRisk)];
+    SetLength(ATable, BusinessDaysLeft + 1) ; //Length(ADayRisk));
     for i:= BusinessDaysLeft downto 1 do begin
       Day:= BusinessDaysLeft - i;
       if Day < Length(ADayRisk) then begin
@@ -432,6 +476,50 @@ begin
   end;  
 end;
 
+function SmoothingArrVolGroup(AArrVolGroup: TArrVolGroup): TArrVolGroup;
+var
+ i: integer;
+ Average: real;
+ Changed: boolean;
+begin
+  repeat
+    Changed:= false;
+    for i:= 0 to High(AArrVolGroup) - 1 do begin
+      if AArrVolGroup[i] < AArrVolGroup[i + 1] then begin   //
+         Average:= (AArrVolGroup[i] + AArrVolGroup[i + 1]) / 2;
+         AArrVolGroup[i]:= Average + 0.0001;
+         AArrVolGroup[i + 1]:= Average - 0.0001;
+         Changed:= true;
+      end;
+    end;
+  until not Changed;
+  Result:= AArrVolGroup;
+end;
+
+function SetProfileTableName: string;
+var
+  TotalStr: string;
+
+   procedure AddStr(PreStr, Root: string);
+   begin
+     TotalStr:= TotalStr + PreStr + Root + '_';
+   end;
+
+begin
+  TotalStr:= '';
+  with CurParameter do begin
+    AddStr('BDL', Format('%d' , [BusinessDaysLeft]));
+    AddStr('BDBG', Format('%d' , [TodayDayLeft]));
+    AddStr('RISK', Format('%.2f', [TodayRisk * 100]));
+    AddStr('S', Format('%d' , [Round(StocksCapital)]));
+    AddStr('G', Format('%d' , [Round(GoldCapital)]));
+    AddStr('R', Format('%d' , [Round(MonthlyExpences)]));
+    TotalStr:= TotalStr + FormatDateTime('yyyy-mm-dd-hh-nn-ss', Now) + '.txt';
+  end;
+  Result:= TotalStr;
+end;
+
+
 procedure MemoLinesAdd(AText: string);
 begin
   if Assigned(CurForm) then begin
@@ -440,11 +528,36 @@ begin
       with TFormNewUser(CurForm) do begin
         if CheckBoxShowCalculating.Checked then
           Memo1.Lines.Add(AText);
-      end;    
+      end;
     end else if CurForm is TForm1 then begin
       TForm1(CurForm).Memo1.Lines.Add(AText);
     end;
   end;
 end;
+
+procedure EnableControls(enable: bool);
+begin
+//  if Terminating then
+//    Exit;
+
+{
+  if Assigned(CurForm) then begin
+
+    if CurForm is TFormNewUser then begin
+      with TFormNewUser(CurForm) do begin
+        //
+      end;
+    end else if CurForm is TForm1 then begin
+      with TForm1(CurForm) do begin
+        ButtonRefreshParameter.Enabled:= enable;
+        ButtonCalculateRisk .Enabled:= enable;
+        ButtonBestRatio.Enabled:= enable;
+        ButtonClearMemo.Enabled:= enable;
+      end;
+    end;
+  end;
+  }
+end;
+
 
 end.

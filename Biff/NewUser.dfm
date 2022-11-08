@@ -1,8 +1,8 @@
 object FormNewUser: TFormNewUser
-  Left = 207
-  Top = 92
+  Left = 134
+  Top = 182
   Width = 729
-  Height = 621
+  Height = 640
   Caption = 'New User'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -92,7 +92,7 @@ object FormNewUser: TFormNewUser
     Width = 65
     Height = 21
     TabOrder = 0
-    Text = '20000'
+    Text = '6000'
     OnKeyPress = NumericEditKeyPress
   end
   object EditMonthlyExpences: TEdit
@@ -195,7 +195,7 @@ object FormNewUser: TFormNewUser
     Width = 65
     Height = 21
     TabOrder = 11
-    Text = '2000'
+    Text = '0'
     OnKeyPress = NumericEditKeyPress
   end
   object EditTotalBankroll: TEdit
@@ -254,5 +254,23 @@ object FormNewUser: TFormNewUser
     Checked = True
     State = cbChecked
     TabOrder = 17
+  end
+  object StatusBar1: TStatusBar
+    Left = 0
+    Top = 583
+    Width = 713
+    Height = 19
+    Panels = <
+      item
+        Alignment = taCenter
+        Width = 80
+      end
+      item
+        Width = 50
+      end>
+  end
+  object Timer1: TTimer
+    Left = 632
+    Top = 24
   end
 end

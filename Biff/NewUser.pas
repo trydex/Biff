@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, ComCtrls, variables;
+  Dialogs, StdCtrls, ComCtrls, variables, ExtCtrls;
 
 type
   TFormNewUser = class(TForm)
@@ -36,6 +36,8 @@ type
     Label10: TLabel;
     EditTodayDayLeft: TEdit;
     CheckBoxShowCalculating: TCheckBox;
+    StatusBar1: TStatusBar;
+    Timer1: TTimer;
     procedure ButtonAddNewUserClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure CheckBoxAdvancedClick(Sender: TObject);
@@ -66,7 +68,7 @@ procedure TFormNewUser.FormCreate(Sender: TObject);
 begin
   DateTimePicker1.MaxDate:= Date - Round(15 * 365.25);
   DateTimePicker1.MinDate:= Date - Round(84 * 365.25);
-  //DateTimePicker1.Date:= Date - Round(8 * 365.25);
+  DateTimePicker1.Date:= Date - Round(54 * 365.25);
   CurForm:= Self;
   LoadIniFile;
   GetParameter;
@@ -121,7 +123,15 @@ begin
 end;
 
 procedure TFormNewUser.ButtonAddNewUserClick(Sender: TObject);
+var i: integer;
 begin
+  for i:= 0 to AllProfiles.Count - 1 do begin
+    if Allprofiles[i] = EditScreenName.Text then begin
+      MessageDlg('Your screenname already exists. Please choose another.' , mtError, [mbYes], 0);
+      Exit;
+    end;
+  end;
+
   CurForm:= Self;
   ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + EditScreenName.Text);
   GetParameter;
@@ -135,10 +145,21 @@ end;
 
 procedure TFormNewUser.ButtonCalculateRiskClick(Sender: TObject);
 begin
-    GetParameter;
-    CurForm:= Self;
+  GetParameter;
+  CurForm:= Self;
+  with CurParameter do begin
+    Memo1.Lines.Add('');
+    Memo1.Lines.Add('Calculate min risk for your parameter ...');
+    TodayRisk:= TargetRisk;
+    Form1.StartTimer(true, 'Calculate min risk for your parameter ...');
+    if Form1.CalculateRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 4) then begin
+      Memo1.Lines.Add('');
+      Memo1.Lines.Add('Calculating is finished.');
+      Form1.StopTimer('Calculating is finished.');
+      Exit;
+    end;
+  end;
     Form1.BestRatioThread := TBestRatioThread.Create(CaseDailyRisk);
-  ButtonGoMainForm.Enabled:= true;
 end;
 
 procedure TFormNewUser.ButtonGoMainFormClick(Sender: TObject);
@@ -148,6 +169,7 @@ begin
   CurForm:= Form1;
   LoadIniFile;
   Form1.SetParameter;
+  Form1.GetMainParameter;
   Form1.Visible:= true;
   Self.Visible:= false;
 end;
@@ -182,6 +204,5 @@ procedure TFormNewUser.FloatEditKeyPress(Sender: TObject; var Key: Char);
 begin
   Form1.FloatEditKeyPress(Sender, Key);
 end;
-
 
 end.
