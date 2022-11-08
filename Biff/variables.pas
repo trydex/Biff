@@ -50,7 +50,7 @@ type
 
   TCaclBankruptcyAlgo = (AlgoSimple, AlgoAdvanced, AlgoExtra);
 
-  TBestRatioCase = (CaseFindBestRatio, CaseDailyRisk, CaseDailyRiskMain);
+  TCalculationCase = (CaseFindBestRatio, CaseDailyRisk, CaseDailyRiskMain, CaseCalcEv);
 
   TArrayReal = array of real;    // for sort array of Total_EV
   TArrayInt = array of integer;
@@ -79,11 +79,11 @@ const
     0.0077491975, 0.00835090583, 0.0091001775, 0.01011414667, 0.01150477083, 0.0135928075, 0.01802705333, 1);
 
 type    
-  TBestRatioThread = class(TThread)
+  TCaclulationThread = class(TThread)
   private
-    ThreadCase: TBestRatioCase;
+    ThreadCase: TCalculationCase;
   public
-    constructor Create(ThreadCase: TBestRatioCase);
+    constructor Create(ThreadCase: TCalculationCase);
     procedure Execute; override;
     procedure DoTerminate; override;
   end;
@@ -134,7 +134,7 @@ uses
   Biff_Main, NewUser;
 
 //================================================
-constructor TBestRatioThread.Create(ThreadCase: TBestRatioCase);
+constructor TCaclulationThread.Create(ThreadCase: TCalculationCase);
 begin
   inherited create(false);
   FreeOnTerminate := true;
@@ -143,7 +143,7 @@ begin
   self.ThreadCase := ThreadCase;
 end;
 
-procedure TBestRatioThread.Execute;
+procedure TCaclulationThread.Execute;
 begin
   with Form1 do begin  // Old Form1
     EnableControls(false);
@@ -151,7 +151,7 @@ begin
   end;
 end;
 
-procedure TBestRatioThread.DoTerminate;
+procedure TCaclulationThread.DoTerminate;
 begin
  with Form1 do begin  // Old Form1
   if Terminating = false then

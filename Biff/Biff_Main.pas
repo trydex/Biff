@@ -63,7 +63,6 @@ type
     { Private declarations }
     Utils: TUtils;
   public
-    BestRatioThread: TBestRatioThread;
     CaclBankruptcyThreads: array of TCaclBankruptcyThread;
     //IsClosing: bool;
     CalculationIsRuning: bool;
@@ -114,7 +113,7 @@ type
     procedure SaveLog;
     procedure CalculateDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
     procedure CreateTableDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
-    procedure FindBestRatioThreadSwitcher(ThreadCase: TBestRatioCase);
+    procedure FindBestRatioThreadSwitcher(ThreadCase: TCalculationCase);
     procedure FindBestRatioProcedure;
     function FindBestRatio(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
     function FindBestRatio_12DayVol(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
@@ -862,16 +861,17 @@ begin
   ProgressBar.Position := 0;
   if GetMainParameter then begin;
     CurForm:= Self;
-    BestRatioThread := TBestRatioThread.Create(CaseFindBestRatio);
+    TCaclulationThread.Create(CaseFindBestRatio);
   end;
 end;
 
-procedure TForm1.FindBestRatioThreadSwitcher(ThreadCase: TBestRatioCase);
+procedure TForm1.FindBestRatioThreadSwitcher(ThreadCase: TCalculationCase);
 begin
   case ThreadCase of
-	  CaseFindBestRatio : CalculateBestRatioMain;  //FindBestRatioProcedure();
-	  CaseDailyRisk : CalculateRiskForNewUser();
+    CaseFindBestRatio : CalculateBestRatioMain;  //FindBestRatioProcedure();
+    CaseDailyRisk : CalculateRiskForNewUser();
     CaseDailyRiskMain : CalculateRiskForMain();
+    CaseCalcEv : CalculateEV(CurParameter.StocksCapital, CurParameter.DailyExpences, CurParameter.TodayRisk, CurParameter.TodayDayLeft, CurParameter.FNumSim);
 	else
     ShowMessage('Unsupported case, please update ThreadCase type');
   end;
@@ -1537,7 +1537,7 @@ begin
       Memo1.Lines.Add('');
       StartTimer(true, 'Calculating Table of Days Risk ...');
 
-      BestRatioThread := TBestRatioThread.Create(CaseDailyRiskMain);
+      TCaclulationThread.Create(CaseDailyRiskMain);
     end;  
   end;
 end;
@@ -1614,9 +1614,8 @@ end;
 
 procedure TForm1.ButtonCalculateEVClick(Sender: TObject);
 begin
-  with CurParameter do begin
-    CalculateEV(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 10);
-  end;  
+  GetMainParameter;
+  TCaclulationThread.Create(CaseCalcEv);
 end;
 
 

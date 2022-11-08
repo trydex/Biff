@@ -159,7 +159,7 @@ begin
       Exit;
     end;
   end;
-    Form1.BestRatioThread := TBestRatioThread.Create(CaseDailyRisk);
+  TCaclulationThread.Create(CaseDailyRisk);
 end;
 
 procedure TFormNewUser.ButtonGoMainFormClick(Sender: TObject);
