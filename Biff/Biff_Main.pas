@@ -129,7 +129,7 @@ type
     procedure CalcNumBankruptcySimpleInternal(FirstSeed: Cardinal; ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure qSort(var A: TArrayReal; min, max: Integer);
     procedure CalculateRiskEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
-    procedure CalculateRiskEVInternal(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
+    procedure CalculateRiskEVInternal(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSimStart, ANumSimEnd: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
     procedure CalculateEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
     function CalculateRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer): boolean;
     function CreatePriceDataArray(ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
@@ -872,7 +872,7 @@ begin
     CaseFindBestRatio : CalculateBestRatioMain;  //FindBestRatioProcedure();
     CaseDailyRisk : CalculateRiskForNewUser();
     CaseDailyRiskMain : CalculateRiskForMain();
-    CaseCalcEv : CalculateEV(CurParameter.StocksCapital, CurParameter.DailyExpences, CurParameter.TodayRisk, CurParameter.TodayDayLeft, CurParameter.FNumSim);
+    CaseCalcEv : CalculateEV(CurParameter.StocksCapital, CurParameter.DailyExpences, CurParameter.TodayRisk, CurParameter.TodayDayLeft, CurParameter.FNumSim * 10);
 	else
     ShowMessage('Unsupported case, please update ThreadCase type');
   end;
@@ -1199,7 +1199,7 @@ begin
   SetLength(ArrBankr^, ANumDay + 1);
   currentTicks := GetTickCount();
 
-  threadLimit := 1;//MaxThreads;
+  threadLimit := MaxThreads;
   if threadLimit > ANumSim then
     threadLimit := ANumSim;
   SetLength(CaclRiskEvThreads, threadLimit);
@@ -1208,7 +1208,7 @@ begin
   
     // Create threads.
   for t:= 0 to threadLimit-1 do begin
-    CaclRiskEvThreads[t] := TCaclulareRiskEvThread.Create(currentTicks, AStartCapital, ARasxod, AMyBankr, ANumDay, stepsThread, ArrBankr, ArrayEV);
+    CaclRiskEvThreads[t] := TCaclulareRiskEvThread.Create(currentTicks, AStartCapital, ARasxod, AMyBankr, ANumDay, stepsThread*t, stepsThread*(t+1), ArrBankr, ArrayEV);
     handles[t] := CaclRiskEvThreads[t].Handle;
     currentTicks := currentTicks + 1;
   end;
@@ -1220,7 +1220,7 @@ begin
 end;
 
 
-procedure TForm1.CalculateRiskEVInternal(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
+procedure TForm1.CalculateRiskEVInternal(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSimStart, ANumSimEnd: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
 var
   i, k : integer;
   TotalCapital, UPROPart, CurUPROPer, CurVOOPer: real;
@@ -1242,7 +1242,7 @@ begin
   RandSeed := FirstSeed;
   Seed := GetTickCount();
 
-  for i:= 0 to ANumSim - 1 do
+  for i:= ANumSimStart to ANumSimEnd - 1 do
   begin
     TotalCapital := AStartCapital;
     ArrPriceData := CreatePriceDataArray(ANumDay, @Seed);
@@ -1250,25 +1250,24 @@ begin
     begin
       with ArrPriceData[k] do
       begin
-         // use ArrVolGroup
-         CurUPROPer:= ArrVolGroup[NumGroup];
-         CurVOOPer:= 1 - CurUPROPer;
+        // use ArrVolGroup
+        CurUPROPer:= ArrVolGroup[NumGroup];
+        CurVOOPer:= 1 - CurUPROPer;
 
-         UPROPart:= CurUPROPer * UPRO;
-         with CurParameter do begin
-           if IsBankruptcy then begin
-             if Random(UPROBankr) = 0 then
-               UPROPart:= 0;
-           end;
-         end;
-         TotalCapital:= TotalCapital * (CurVOOPer * VOO + UPROPart) - ARasxod;
-         if TotalCapital <= 0 then
-         begin
-           //Inc(UPROBankrot);
-           TotalCapital:= 0;
-           InterlockedIncrement(ArrBankr^[k]);
-           Break;
-         end;
+        UPROPart:= CurUPROPer * UPRO;
+        with CurParameter do begin
+          if IsBankruptcy and (MyRandInt(UPROBankr) = 0) then begin
+            UPROPart:= 0;
+          end;
+        end;
+        TotalCapital:= TotalCapital * (CurVOOPer * VOO + UPROPart) - ARasxod;
+        if TotalCapital <= 0 then
+        begin
+          //Inc(UPROBankrot);
+          TotalCapital:= 0;
+          InterlockedIncrement(ArrBankr^[k]);
+          Break;
+        end;
       end;
     end;
     //Total_EV:= Total_EV + TotalCapital;

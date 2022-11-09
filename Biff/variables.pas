@@ -107,12 +107,12 @@ type
   TCaclulareRiskEvThread = class(TThread)
   private
     AStartCapital, ARasxod, AMyBankr: real;
-    ANumDay, ANumSim: integer;
+    ANumDay, ANumSimStart, ANumSimEnd: integer;
     ArrBankr: PArrayInt;
     ArrayEV: PArrayReal;
     FirstSeed: Cardinal;
   public
-    constructor Create(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
+    constructor Create(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSimStart, ANumSimEnd: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
     procedure Execute; override;
     destructor Destroy; override;
     //procedure DoTerminate; override;
@@ -214,7 +214,7 @@ end;
 
 //================================================
 
-constructor TCaclulareRiskEvThread.Create(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
+constructor TCaclulareRiskEvThread.Create(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSimStart, ANumSimEnd: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
 begin
   inherited create(false);
   FreeOnTerminate := true;
@@ -225,14 +225,15 @@ begin
   self.ARasxod := ARasxod;
   self.AMyBankr := AMyBankr;
   self.ANumDay := ANumDay;
-  self.ANumSim := ANumSim;
+  self.ANumSimStart := ANumSimStart;
+  self.ANumSimEnd := ANumSimEnd;
   self.ArrBankr := ArrBankr;
   self.ArrayEV := ArrayEV;
 end;
 
 procedure TCaclulareRiskEvThread.Execute;
 begin
-  Form1.CalculateRiskEVInternal(FirstSeed, AStartCapital, ARasxod, AMyBankr, ANumDay, ANumSim, ArrBankr, ArrayEV);
+  Form1.CalculateRiskEVInternal(FirstSeed, AStartCapital, ARasxod, AMyBankr, ANumDay, ANumSimStart, ANumSimEnd, ArrBankr, ArrayEV);
 end;
 
 destructor TCaclulareRiskEvThread.Destroy;
