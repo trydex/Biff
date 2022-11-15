@@ -6,7 +6,8 @@ uses
   profile in 'profile.pas' {FormProfile},
   variables in 'variables.pas',
   NewUser in 'NewUser.pas' {FormNewUser},
-  Login in 'Login.pas' {FormLogin};
+  Login in 'Login.pas' {FormLogin},
+  Utils in 'Utils.pas';
 
 {$R *.res}
 

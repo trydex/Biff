@@ -5,7 +5,7 @@ interface
 uses Windows, Messages, SysUtils, Variants, Classes;
 
 const
-  BiffShortDateFomat = 'dd.mm.yyyy';
+  BiffShortDateFormat = 'dd.mm.yyyy';
   BiffDateSeparator  = '.';
 
 type
@@ -16,6 +16,8 @@ type
     constructor Create;
     destructor Destroy; override;
     function StrToDateEx(value: string): TDateTime;
+    function StrToDateDefEx(value: string; Default: TDateTime): TDateTime;
+
     function GetCpuCount(): Cardinal;
     procedure Shuffle(var listOfT: TList);
     procedure ShuffleArray(var iArray: array of integer);
@@ -42,12 +44,24 @@ function TUtils.StrToDateEx(value: string): TDateTime;
 var  fmt     : TFormatSettings;
      dt      : TDateTime;
 begin
-  fmt.ShortDateFormat:= BiffShortDateFomat;
+  fmt.ShortDateFormat:= BiffShortDateFormat;
   fmt.DateSeparator  := BiffDateSeparator;
   fmt.LongTimeFormat := 'hh:nn:ss';
   fmt.TimeSeparator  := ':';
   result := StrToDate(value, fmt);
 end;
+
+function TUtils.StrToDateDefEx(value: string; Default: TDateTime): TDateTime;
+var  fmt     : TFormatSettings;
+     dt      : TDateTime;
+begin
+  fmt.ShortDateFormat:= BiffShortDateFormat;
+  fmt.DateSeparator  := BiffDateSeparator;
+  fmt.LongTimeFormat := 'hh:nn:ss';
+  fmt.TimeSeparator  := ':';
+  result := StrToDateDef(value, Default, fmt);
+end;
+
 
 function TUtils.GetCpuCount: Cardinal;
 var Info: TSystemInfo;

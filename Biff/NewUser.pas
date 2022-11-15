@@ -51,7 +51,8 @@ type
     { Private declarations }
   public
     { Public declarations }
-    procedure GetParameter;
+    //procedure GetParameter;
+    function GetNewUserParameter: boolean;
   end;
 
 var
@@ -71,7 +72,7 @@ begin
   DateTimePicker1.Date:= Date - Round(54 * 365.25);
   CurForm:= Self;
   LoadIniFile;
-  GetParameter;
+  GetNewUserParameter;
 end;
 
 
@@ -84,7 +85,7 @@ begin
   CheckBoxBankruptcy.Enabled:= IsEnabled;
 end;
 
-procedure TFormNewUser.GetParameter;
+function TFormNewUser.GetNewUserParameter: boolean;
 begin
   with CurParameter do begin
     ScreenName:= EditScreenName.Text;
@@ -102,22 +103,25 @@ begin
     IsBankruptcy:= CheckBoxBankruptcy.Checked;
     UPROBankr:= StrToIntDef(EditUPROBankr.Text, 50000);
     CalculateDayLeft(Date);
-    {
-    DailyExpences:= MonthlyExpences / 20.933;   // Check it !!!
-    BusinessDaysLeft:= Trunc(DateofBirth + 85 * 365.25)  - Trunc(Date);
-    BusinessDaysLeft:= Round(BusinessDaysLeft * 251.2 / 365.25);
-    TodayDayLeft:= BusinessDaysLeft - Round(GoldCapital / DailyExpences);
-   }
     EditBusinessDaysLeft.Text:= IntToStr(BusinessDaysLeft);
+    EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
+    CurProfile:= ScreenName;
+    Result:= false;
     if TodayDayLeft < 0 then begin
       TodayDayLeft:= 0;
       MemoLinesAdd('You will never be broke.');
       MemoLinesAdd('Your gold assets are enough for the rest of your life.');
       MemoLinesAdd('Invest all your stock money to UPRO and have fun.');
       MemoLinesAdd('YOU DON''T NEED BIFF.');
+    end else if TargetRisk < 0.01 then begin
+      MemoLinesAdd('Your Risk is too small.');
+      MemoLinesAdd('Your Risk should be beetween 1% - 99%');
+    end else if TargetRisk > 0.99 then begin
+      MemoLinesAdd('Your Risk is too big.');
+      MemoLinesAdd('Your Risk should be beetween 1% - 99%');
+    end else begin
+      Result:= true;
     end;
-    EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
-    CurProfile:= ScreenName;
   end;
 
 end;
@@ -134,31 +138,30 @@ begin
 
   CurForm:= Self;
   ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + EditScreenName.Text);
-  GetParameter;
-  SaveIniFile;
-  SaveProfileIniFile;
-  if CurParameter.TodayDayLeft > 0 then
+  if GetNewUserParameter then begin
+    SaveIniFile;
+    SaveProfileIniFile;
+//  if CurParameter.TodayDayLeft > 0 then
     ButtonCalculateRisk.Enabled:= true
-  else
+  end else begin
     ButtonCalculateRisk.Enabled:= false;
+  end;
 end;
 
 procedure TFormNewUser.ButtonCalculateRiskClick(Sender: TObject);
 begin
-  GetParameter;
+  if not GetNewUserParameter then Exit;
   CurForm:= Self;
   with CurParameter do begin
     Memo1.Lines.Add('');
-    Memo1.Lines.Add('Calculate min risk for your parameter ...');
-    TodayRisk:= TargetRisk;
-    Form1.StartTimer(true, 'Calculate min risk for your parameter ...');
-    if Form1.CalculateRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 4) then begin
+    TodayRisk:= TargetRisk;
+    Form1.StartTimer(true, 'Calculate min risk for your parameters ...');
+    if Form1.CalculateRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 10) then begin
       Memo1.Lines.Add('');
-      Memo1.Lines.Add('Calculating is finished.');
       Form1.StopTimer('Calculating is finished.');
       Exit;
     end;
-  end;
+  end;  
   TCaclulationThread.Create(CaseDailyRisk);
 end;
 
@@ -177,6 +180,10 @@ end;
 procedure TFormNewUser.FormCloseQuery(Sender: TObject;
   var CanClose: Boolean);
 begin
+  if MessageDlg('Do you really want to close?', mtCustom, [mbYes, mbNo], 0) <> mrYes then begin
+    CanClose := false;
+    Exit;
+  end;
   if CurForm <> nil then begin
     SaveIniFile;
   //  CurForm:= Self;

@@ -74,6 +74,20 @@ type
     TodayVolGroup: integer;
   end;
 
+  TSNP500 = record
+    FDate: TDate;
+    SNPClose, SNPDiff: real;
+    Vol, Vol12Average: real;
+    VolGroup: integer;
+    UPROPer: real;
+  end;
+
+  TCurCell = record
+    CurCol, CurRow: integer;
+    OldValue: string;
+    Edited: boolean;
+  end;
+
 const
   GroupVol: array[0..22] of real =
    (0.00268444417, 0.00314709083, 0.0035062525, 0.0038021225, 0.0040878625, 0.0043652625, 0.00464857167,
@@ -126,7 +140,9 @@ var
   CurParameter: TParameter;
   TableDayRisk: TArrayReal;
   StartTimeTimer: TDateTime;
-
+  ArraySNP500: array of TSNP500;
+  CurCell: TCurCell;
+  
  // procedure FindBestRatioProcedure();
   procedure LoadIniFile;
   procedure SaveIniFile;
@@ -137,12 +153,19 @@ var
   procedure MemoLinesAdd(AText: string);
   procedure LoadTableDayRisk(var ATable: TArrayReal);
   procedure SaveTableDayRisk(ATable: TArrayReal);
+  function GetLatestFileName(ADir: string): string;
+  procedure LoadArrVolGroup(var AArrVolGroup: TArrVolGroup);
   procedure SaveArrVolGroup(AArrVolGroup: TArrVolGroup);
   procedure AddToTableDayRisk(var ATable: TArrayReal; ADayRisk: TArrayReal);
   procedure CalculateDayLeft(ATodayDate: TDate);
   function SetProfileTableName: string;
   function SmoothingArrVolGroup(AArrVolGroup: TArrVolGroup): TArrVolGroup;
   procedure EnableControls(enable: bool);
+  function FindNumGroup(ToFind: real): integer;
+  procedure AddSNP500(ADate: TDate; AClose: real);
+  procedure LoadArraySNP500;
+  procedure SaveArraySNP500;
+
 
 implementation
 
@@ -354,7 +377,7 @@ begin
   try
    with CurParameter do begin
     AIniFile.WriteString('Parameter', 'ScreenName', ScreenName);
-    AIniFile.WriteString('Parameter', 'DateOfBirth', FormatDateTime(BiffShortDateFomat, DateOfBirth));
+    AIniFile.WriteString('Parameter', 'DateOfBirth', FormatDateTime(BiffShortDateFormat, DateOfBirth));
     AIniFile.WriteFloat('Parameter', 'TargetRisk', TargetRisk * 100);
     AIniFile.WriteFloat('Parameter', 'TodayRisk', TodayRisk * 100);
     AIniFile.WriteFloat('Parameter', 'StocksCapital', StocksCapital);
@@ -437,12 +460,78 @@ begin
   DeathDate:= Round(CurParameter.DateOfBirth + 85 * 365.25);
   for i:= High(ATable) downto 0 do begin
     CurDate:= Round(DeathDate - i * 365.25 / 251.2);
-    S:= FormatDateTime(BiffShortDateFomat, CurDate) + ' ';
+    S:= FormatDateTime(BiffShortDateFormat, CurDate) + ' ';
     S:= S + IntToStr(i) + '=' + Format('%.4f', [ATable[i] * 100]);
     writeln(F, S);
   end;
   CloseFile(F);
 end;
+
+function GetLatestFileName(ADir: string): string;
+var
+  SR: TSearchRec;
+  FindRes: integer;
+  AFileMask, FileStr, FileRootStr: string;
+  CurTime, MaxTime: TDateTime;
+begin
+  Result:= '';
+    try
+      AFileMask:='*.txt';
+      //FileRootStr:= ExtractFilePath(GetModuleName(0)) + '\Profiles\' + CurProfile + '\Archive Ratio\';
+      FileRootStr:= ADir;
+      FindRes:= FindFirst(FileRootStr + AFileMask, faAnyFile, SR);
+      while FindRes = 0 do begin
+        CurTime:= FileDateToDateTime(SR.Time);
+        if CurTime > MaxTime then begin
+          MaxTime:= CurTime;
+          Result:= {FileRootStr + }SR.Name ;
+        end;
+        FindRes:= FindNext(SR);
+      end;
+    finally
+      FindClose(SR);
+    end;
+end;
+
+procedure LoadArrVolGroup(var AArrVolGroup: TArrVolGroup);
+var
+  F: TextFile;
+  S, FileNameStr: string;
+  CurDate: TDate;
+  CurClose: real;
+  i: integer;
+
+  function GetStr(SubStr, Str: string): string;
+  var PosStart, PosEnd: integer;
+  begin
+    PosStart:= Pos(SubStr, Str) + Length(SubStr);
+    PosEnd:= PosEx(';', Str, PosStart);
+    if PosEnd = 0 then
+      PosEnd:= 30;
+    Result:= Copy(Str, PosStart, PosEnd - PosStart);
+  end;
+
+begin
+  FileNameStr:= ExtractFilePath(GetModuleName(0)) + '\Profiles\' + CurProfile + '\Archive Ratio\';
+  FileNameStr:= FileNameStr + GetLatestFileName(FileNameStr);
+  AssignFile(F, FileNameStr);
+  {$I-}
+  Reset(F);
+  {$I+}
+  if IOResult <> 0 then begin
+    //MessageDlg('Error Loading file ' + FileNameStr, mtError, [mbOk], 0);
+    Exit;
+  end;
+  i:= 0;
+  while not EOF(F) do begin
+    readln(F, S);
+    AArrVolGroup[i]:= StrToFloatDef(GetStr(':', S), 0) / 100;
+    Inc(i);
+  end;
+  CloseFile(F);
+end;
+
+
 
 procedure SaveArrVolGroup(AArrVolGroup: TArrVolGroup);
 var
@@ -603,6 +692,121 @@ begin
     end;
   end;
   }
+end;
+
+  function FindNumGroup(ToFind: real): integer;
+  var
+    N, First, Last, Mid: integer;
+  begin
+    First:= 0;  Last:= 22;
+    while First < Last do begin
+      Mid:= (First + Last) div 2;
+      if GroupVol[Mid] < ToFind then
+        First:= Mid + 1
+      else
+        Last:= Mid ;
+    end;
+    Result:= First;  // or Last
+  end;
+
+
+procedure AddSNP500(ADate: TDate; AClose: real);
+var i, CurI, StartI, EndI, Num: integer;
+begin
+  CurI:= Length(ArraySNP500);
+  SetLength(ArraySNP500, CurI + 1);
+  with ArraySNP500[CurI] do begin
+    FDate:= ADate;
+    SNPClose:= AClose;
+    if CurI > 0 then
+      SNPDiff:= SNPClose / ArraySNP500[CurI - 1].SNPClose
+    else
+      SNPDiff:= 1;
+    Vol:= Abs(SNPDiff - 1.0006825);
+    //StartI:= CurI - 12;   // old
+    StartI:= CurI - 11;
+    if StartI < 0 then
+      StartI:= 0;
+    //EndI:= CurI - 1;      // old
+    EndI:= CurI ;
+    Vol12Average:= 0;
+    for i:= StartI to EndI do begin
+      Vol12Average:= Vol12Average + ArraySNP500[i].Vol;  // Suma last 12 Vol
+    end;
+    Num:= EndI - StartI + 1;
+    if Num > 0 then begin
+      if Num > 12 then
+        Num:= 12;
+      Vol12Average:= Vol12Average / Num;    // Average last 12 Vol
+    end;
+    VolGroup:= FindNumGroup(Vol12Average);
+  end;
+end;
+
+procedure LoadArraySNP500;
+var
+  F: TextFile;
+  S, FileNameStr: string;
+  CurDate: TDate;
+  CurClose: real;
+
+  function GetStr(SubStr, Str: string): string;
+  var PosStart, PosEnd: integer;
+  begin
+    PosStart:= Pos(SubStr, Str) + Length(SubStr);
+    PosEnd:= PosEx(';', Str, PosStart);
+    Result:= Copy(Str, PosStart, PosEnd - PosStart);
+  end;
+
+begin
+  //FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\TableDayRisk.txt';
+  FileNameStr:= ExtractFilePath(ParamStr(0)) + 'SNP_500.txt';
+  AssignFile(F, FileNameStr);
+  {$I-}
+  Reset(F);
+  {$I+}
+  SetLength(ArraySNP500, 0);
+  if IOResult <> 0 then begin
+    //MessageDlg('Error Loading file ' + FileNameStr, mtError, [mbOk], 0);
+    Exit;
+  end;
+
+  while not EOF(F) do begin
+    readln(F, S);
+    CurDate:= Utils.StrToDateDefEx(GetStr('Date=', S), Date);
+    CurClose:= StrToFloat(GetStr('Close=', S));
+    AddSNP500(CurDate, CurClose);
+  end;
+  CloseFile(F);
+end;
+
+
+procedure SaveArraySNP500;
+var
+  F: TextFile;
+  S, FileNameStr, ArchiveNameStr: string;
+  i: integer;
+  CurDate, DeathDate: TDate;
+begin
+  //FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\TableDayRisk.txt';
+  FileNameStr:= ExtractFilePath(ParamStr(0)) + 'SNP_500.txt';
+  AssignFile(F, FileNameStr);
+  Rewrite(F);
+  for i:= 0 to High(ArraySNP500) do begin
+    with ArraySNP500[i] do begin
+      S:= ' Date=' + FormatDateTime(BiffShortDateFormat, FDate) + ';';
+      S:= S + Format(' Close=%f;', [SNPClose]);
+      S:= S + Format(' Diff=%f;', [(SNPDiff - 1) * 100]);
+      S:= S + Format(' Volat=%.6f;', [Vol]);
+      S:= S + Format(' 12VolAv=%.6f;', [Vol12Average]);
+      S:= S + Format(' Group=%d;', [VolGroup + 1]);
+      //if not IsZero(UPROPer) then begin
+      //  S:= S + Format(' UPRO=%f;', [UPROPer * 100]);
+      //end;
+      writeln(F, S);
+    end;
+  end;
+  CloseFile(F);
 end;
 
 

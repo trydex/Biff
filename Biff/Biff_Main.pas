@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, Math, INIFiles, ComCtrls, ExtCtrls, UnitDialog, Utils, StrUtils,
-  profile, variables, Login, NewUser; 
+  profile, variables, Login, NewUser, Grids;
 
 type
   TForm1 = class(TForm)
@@ -13,7 +13,6 @@ type
     ButtonClearMemo: TButton;
     ButtonBestRatio: TButton;
     StatusBar1: TStatusBar;
-    ProgressBar: TProgressBar;
     ButtonStopFillTable: TButton;
     Label5: TLabel;
     EditScreenName: TEdit;
@@ -43,6 +42,16 @@ type
     ListBoxVolGroup: TListBox;
     Timer1: TTimer;
     ButtonCalculateEV: TButton;
+    Panel1: TPanel;
+    StringGrid1: TStringGrid;
+    DateTimePicker2: TDateTimePicker;
+    EditSNP500: TEdit;
+    ButtonAddDay: TButton;
+    EditTodayGroup: TEdit;
+    Label11: TLabel;
+    Label12: TLabel;
+    EditTodayUPRO: TEdit;
+    ButtonTodayUPRO: TButton;
     procedure FormCreate(Sender: TObject);
     procedure ButtonClearMemoClick(Sender: TObject);
   //  procedure ButtonUPROClick(Sender: TObject);
@@ -58,6 +67,16 @@ type
     procedure CheckBoxAdvancedClick(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
     procedure ButtonCalculateEVClick(Sender: TObject);
+    procedure StringGrid1SelectCell(Sender: TObject; ACol, ARow: Integer;
+      var CanSelect: Boolean);
+    procedure StringGrid1SetEditText(Sender: TObject; ACol, ARow: Integer;
+      const Value: String);
+    procedure StringGrid1GetEditText(Sender: TObject; ACol, ARow: Integer;
+      var Value: String);
+    procedure StringGrid1Exit(Sender: TObject);
+    procedure StringGrid1KeyPress(Sender: TObject; var Key: Char);
+    procedure ButtonAddDayClick(Sender: TObject);
+    procedure ButtonTodayUPROClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -78,17 +97,6 @@ type
 
     PriceData: TArrPriceData;
     PriceData2Dim: array of TArrPriceData;
-  {
-    StartCapital: real;
-    Rasxod: real;
-    NumDay: integer;
-    NumSim: int64;
-    MyBankr: real;
-    UPROBankr: integer;
-    FUPROPerc, FVOOPerc: real;
-    TotalDay, StepDay, ReRatioDay: integer;
-    IsBankruptcy: boolean;
-    }
     IsInflation: boolean;   // allways true
     RatioArray: TRatioArray;
     ZeroRatioArray: TRatioArray;
@@ -105,9 +113,7 @@ type
     procedure OpenPriceFile;
     procedure OpenPriceFileByName(var APriceData: TArrPriceData; AFileName: string);
     function GetDirectoryName(NumGroup: integer): string;
-    procedure GetProbDeath;
     procedure GetProbDeathArr;
-    //procedure GetMainParameter;
     function GetMainParameter: boolean;
     procedure SetParameter;
     procedure SetLogFileName;
@@ -140,7 +146,10 @@ type
    // function NotEmpty(AArrVolGroup: TArrVolGroup): boolean;
     procedure StartTimer(Restart: boolean; AStr: string);
     procedure StopTimer(AStr: string);
-
+    procedure PrepareGrid;
+    procedure EnterCurCell;
+    procedure ShowGridSNP500;
+    procedure ShowTodayUPRO;
  end;
 
 var
@@ -201,18 +210,20 @@ begin
   DecimalSeparator := '.';
 
   // Init some default values.
-  ProgressBar.DoubleBuffered := true;
+  
   MaxThreads := Utils.GetCpuCount;
   TotalStepsTime := 0;
   Version := Caption;
 
-  //LoadIniFile;
-  //GetAllParameter;
-  //if IsInflation = false then
-    OpenPriceFile; // load price file only if it wasn't loaded before
-  //LoadTable; // uncomment to auto-load a table on start
-  GetProbDeath;
+  OpenPriceFile; // load price file only if it wasn't loaded before
   GetProbDeathArr;
+  LoadArraySNP500;
+  ShowGridSNP500;
+  PrepareGrid;
+  LoadArrVolGroup(ArrVolGroup);
+  ShowArrVolGroupForm(ArrVolGroup);
+  ShowTodayUPRO;
+
   for i:= 0 to MaxI do begin
     with ZeroRatioArray[i] do begin
       UPROPerc:= i / MaxI;
@@ -341,25 +352,6 @@ begin
  end;
 end;
 
-procedure TForm1.GetProbDeath;
-var
-  i: integer;
-  FileNameStr, S: string;
-begin
-  FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Prices\prob_death.txt';
-  try
-    Memo1.Lines.Clear;
-    Memo1.Lines.LoadFromFile(FileNameStr);
-    SetLength(ArrProbDeath, Memo1.Lines.Count);
-    for i:= 0 to Memo1.Lines.Count - 1 do begin
-      S:= Memo1.Lines[i];
-      ArrProbDeath[i]:= StrToFloat(S);
-    end;
-    Memo1.Lines.Clear;
-  except
-    Memo1.Lines.Add('File ' + FileNameStr + ' not found.')
-  end;
-end;
 
 procedure TForm1.GetProbDeathArr;
 var
@@ -402,7 +394,7 @@ var i, N,  NumGroup, Index: integer;
       MOV     EAX,EDX
       POP     EBX
   end;
-
+    {
   function FindNumGroup(ToFind: real): integer;
   var
     N, First, Last, Mid: integer;
@@ -417,7 +409,7 @@ var i, N,  NumGroup, Index: integer;
     end;
     Result:= First;  // or Last
   end;
-
+     }
 begin
   RandSeed := FirstSeed^;
   SetLength(ArrPriceData, ANumDay + 1);   // not use 0-index of array
@@ -453,7 +445,7 @@ begin
   end;
 
   FirstSeed^ := RandSeed;
-  Result := ArrPriceData; 
+  Result := ArrPriceData;
 end;
 
 
@@ -557,7 +549,6 @@ asm
     POP     EBX
 end;
 begin    // new version from 2.01
-  //priceDataLength:= Length(PriceData);
   RandSeed := FirstSeed;
 
   for i:= 1 to ANumSim do begin
@@ -859,7 +850,7 @@ end;
 
 procedure TForm1.ButtonBestRatioClick(Sender: TObject);
 begin
-  ProgressBar.Position := 0;
+ // ProgressBar.Position := 0;
   if GetMainParameter then begin;
     CurForm:= Self;
     TCaclulationThread.Create(CaseFindBestRatio);
@@ -896,6 +887,7 @@ begin
       OrigArrVolGroup:= ArrVolGroup;
       ShowArrVolGroup(ArrVolGroup);
       ShowArrVolGroupForm(ArrVolGroup);
+      SaveArrVolGroup(ArrVolGroup);
     end;
  //  SaveLog;
  // EditUPROPer.Text:= FloatToStr(BestRatio * 100 / MaxI);
@@ -922,6 +914,7 @@ begin
       Exit;
     end;
     }
+
     StartTimer(true, 'Calculate Daily Risks ...');
     TodayRisk:= TargetRisk;
     Memo1.Lines.Add('');
@@ -943,6 +936,8 @@ begin
     CreateTableDayRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 10);
     Memo1.Lines.Add('');
     Memo1.Lines.Add('All calculating is finished.');
+    StopTimer('Calculate Daily Risks finished.');
+    Memo1.Lines.Add('');
     if CurForm is TFormNewUser then begin
       Memo1.Lines.Add('Now You can Go to Main Window.');
     end;
@@ -951,7 +946,7 @@ begin
     FormNewUser.ButtonGoMainForm.Enabled:= true;
   end;
   ShowArrVolGroupForm(ArrVolGroup);
-  StopTimer('Calculate Daily Risks finished.');
+  SaveArrVolGroup(ArrVolGroup);
 end;
 
 procedure TForm1.CalculateRiskForMain();
@@ -964,12 +959,14 @@ begin
     //MemoLinesAdd(Format('TodayRisk = %f',[TodayRisk * 100]));
     FindBestRatioProcedure();
     ShowArrVolGroupForm(ArrVolGroup);
+    SaveArrVolGroup(ArrVolGroup);
     Memo1.Lines.Add('');
     Memo1.Lines.Add('Calculate 2 / 2 ...');
     Memo1.Lines.Add(Format('Create table of days risk when Risk = %f',[TodayRisk * 100]));
     CreateTableDayRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 10);
     Memo1.Lines.Add('');
     Memo1.Lines.Add('All calculating is finished.');
+    StopTimer('Calculating Table of Days Risk finished.');
   end;  
 
 end;
@@ -994,8 +991,7 @@ var i, k, t, N, Index, UPROBankrot: integer;
   StartYear, StartDay, CurYear: integer;
 begin
   MemoLinesAdd('');
-  //Memo1.Lines.Add('Simulation Method - 12-Day Volatility');
-  N:= Length(PriceData);
+//  N:= Length(PriceData);
   ArrVolGroup:= OrigArrVolGroup;
   Seed := GetTickCount;
 
@@ -1105,8 +1101,7 @@ var i, k, t, N, Index, UPROBankrot: integer;
   StartYear, StartDay, CurYear: integer;
 begin
   MemoLinesAdd('');
-  //Memo1.Lines.Add('Simulation Method - 12-Day Volatility');
-  N:= Length(PriceData);
+//  N:= Length(PriceData);
   ArrVolGroup:= OrigArrVolGroup;
   Seed := GetTickCount;
 
@@ -1380,15 +1375,20 @@ begin    // main function
     ArrVolGroup[i]:= 0;
   end;
   CurRisk:= GetRiskCapital(AStartCapital);
-  MemoLinesAdd(Format('For Capital = %.0f , Risk = %f ', [AStartCapital, CurRisk * 100]));
+  MemoLinesAdd(Format('For Capital = %.0f , Min Risk = %f ', [AStartCapital, CurRisk * 100]));
   Result:= false;
   if CurRisk < AMyBankr then Exit;
   Result:= true;
   if MessageDlg('You Stocks Capital is too small. '
                 + 'Do you want calculate minimum needed capital?' , mtCustom, [mbYes, mbNo], 0) = mrYes then begin
 
-    First:= AStartCapital;
-    Last:= ARasxod * ANumDay;
+    Last:= ARasxod * ANumDay / 2;
+    repeat
+      Last:= Last * 2;
+      CurRisk:= GetRiskCapital(Last);
+      MemoLinesAdd(Format('For Capital = %.0f , Min Risk = %f ', [Last, CurRisk * 100]));
+    until CurRisk < AMyBankr;
+    First:= (Max(AStartCapital, Last / 2));
 
     while Abs(Last - First) > ARasxod * 20.9  do begin
       if Terminating then
@@ -1396,7 +1396,7 @@ begin    // main function
 
       CurCapital:= (First + Last) / 2;
       CurRisk:= GetRiskCapital(CurCapital);
-      MemoLinesAdd(Format('For Capital = %.0f , Risk = %f ', [CurCapital, CurRisk * 100]));
+      MemoLinesAdd(Format('For Capital = %.0f , Min Risk = %f ', [CurCapital, CurRisk * 100]));
       if CurRisk < AMyBankr then begin
         Last:= CurCapital;
       end else begin
@@ -1475,13 +1475,12 @@ procedure TForm1.ShowArrVolGroupForm(AArrVolGroup: TArrVolGroup);
 var i: integer;
 begin
   with ListBoxVolGroup do begin
-    //ListBoxVolGroup.Count:= 23;
     if Length(AArrVolGroup) = 23 then
     for i:= 0 to 22 do begin
       Items[i]:= Format(' %2d:  %2.2F' + '%', [i+1, AArrVolGroup[i] * 100]);
     end;
   end;
-  SaveArrVolGroup(AArrVolGroup);
+  //SaveArrVolGroup(AArrVolGroup);
 end;
 
 procedure TForm1.EnableControls(enable: bool);
@@ -1492,11 +1491,28 @@ begin
         ButtonCalculateRisk .Enabled:= enable;
         ButtonBestRatio.Enabled:= enable;
         ButtonClearMemo.Enabled:= enable;
+        ButtonCalculateEV.Enabled:= enable;
+        ButtonTodayUPRO.Enabled:= enable;
+        ButtonAddDay.Enabled:= enable;
+        StringGrid1.Enabled:= enable;
+        DateTimePicker1.Enabled:= enable;
+        EditStocks.Enabled:= enable;
+        EditGold.Enabled:= enable;
+        EditMonthlyExpences.Enabled:= enable;
+        DateTimePicker2.Enabled:= enable;
+        EditSNP500.Enabled:= enable;
+        CheckBoxAdvanced.Enabled:= enable;
+        CheckBoxBankruptcy.Enabled:= enable;
+        EditNumSim.Enabled:= enable;
+        EditUPROBankr.Enabled:= enable;
+        EditTodayGroup.Enabled:= enable;
+        EditTodayUPRO.Enabled:= enable;
+
 end;
 
 procedure TForm1.WMUpdatePB(var msg: TMessage);
 begin
-  ProgressBar.StepIt;
+//  ProgressBar.StepIt;
 end;
 
 
@@ -1508,6 +1524,7 @@ begin
     SaveIniFile;
   //  CurForm:= Self;
     SaveProfileIniFile;
+    SaveArraySNP500;
   end;
 {
   CurForm:= Self;
@@ -1557,7 +1574,7 @@ begin
     '0'..'9': ; // numbers
     #8: ;       // backspace
     #127: ;     // delete
-    '-': ;      // minus
+  //  '-': ;      // minus
     '.', ',':
       if Pos(DecimalSeparator, (Sender as TEdit).Text) = 0 then
         Key := DecimalSeparator
@@ -1577,7 +1594,7 @@ end;
 procedure TForm1.ButtonCalculateRiskClick(Sender: TObject);
 begin
 //  with Form1, CurParameter do begin
-  if MessageDlg('You should recalculate daily risks only if your parameter is changed a lot. '
+  if MessageDlg('You should recalculate daily risks only if at least one of your parameters is changed a lot. '
                 + 'Do you really want to recalculate?' , mtCustom, [mbYes, mbNo], 0) = mrYes then begin
     if GetMainParameter then begin
       CurForm:= Self;
@@ -1663,6 +1680,185 @@ procedure TForm1.ButtonCalculateEVClick(Sender: TObject);
 begin
   GetMainParameter;
   TCaclulationThread.Create(CaseCalcEv);
+end;
+
+procedure TForm1.PrepareGrid;
+var i: integer;
+begin
+  DateTimePicker2.Date:= Date;
+  with StringGrid1 do begin
+    ColWidths[0]:= 25;
+    ColWidths[1]:= 75;
+    ColWidths[2]:= 60;
+    ColWidths[3]:= 60;
+    ColWidths[4]:= 40;
+    //ColWidths[5]:= 45;
+
+    Cells[1,0]:= 'Date';
+    Cells[2,0]:= 'Close';
+    Cells[3,0]:= 'Diff';
+    Cells[4,0]:= 'Group';
+    //Cells[5,0]:= 'UPRO';
+
+    for i:= 1 to RowCount - 1 do begin
+      Cells[0, i]:= IntToStr(i);
+    end;  
+  end;
+end;
+
+procedure TForm1.StringGrid1SelectCell(Sender: TObject; ACol,
+  ARow: Integer; var CanSelect: Boolean);
+begin
+  if (ACol > 2) {or (ARow > 1)} then begin
+    CanSelect:= false;
+  end;
+  EnterCurCell;
+end;
+
+procedure TForm1.StringGrid1SetEditText(Sender: TObject; ACol,
+  ARow: Integer; const Value: String);
+begin
+  //MemoLinesAdd(Format(' Col = %d, Row = %d, Text = %s', [ACol, ARow, Value]));
+end;
+
+
+procedure TForm1.StringGrid1GetEditText(Sender: TObject; ACol,
+  ARow: Integer; var Value: String);
+begin
+  //MemoLinesAdd(Format('Get Text: Col = %d, Row = %d, Text = %s', [ACol, ARow, Value]));
+  with CurCell do begin
+    CurCol:= ACol;
+    CurRow:= ARow;
+    Edited:= true;
+    OldValue:= Value;
+  end;  
+end;
+
+procedure TForm1.StringGrid1Exit(Sender: TObject);
+begin
+  EnterCurCell;
+end;
+
+procedure TForm1.StringGrid1KeyPress(Sender: TObject; var Key: Char);
+begin
+  if Key = #13 then begin
+    EnterCurCell;
+  end else begin
+   case key of
+    '0'..'9': ; // numbers
+    #8: ;       // backspace
+    #127: ;     // delete
+  //  '-': ;      // minus
+    '.', ',':
+        Key := DecimalSeparator
+    else
+      key := #0;
+   end;
+  end;
+end;
+
+procedure TForm1.EnterCurCell;
+var
+  OldDate, NewDate: TDate;
+  OldSNP, NewSNP: real;
+  Index: integer;
+begin
+  with StringGrid1, CurCell do begin
+    Index:= High(ArraySNP500) - CurRow + 1;
+    if CurCol = 1 then begin   // Date
+      OldDate:= Utils.StrToDateDefEx(OldValue, Date);
+      NewDate:= Utils.StrToDateDefEx(Cells[CurCol, CurRow], OldDate);
+      Cells[CurCol, CurRow]:= FormatDateTime(BiffShortDateFormat, NewDate);
+      ArraySNP500[Index].FDate:= NewDate;
+    end else if CurCol = 2 then begin  // SNP500 Close
+      OldSNP:= StrToFloatDef(OldValue, 0);
+      NewSNP:= StrToFloatDef(Cells[CurCol, CurRow], OldSNP);
+      if IsZero(NewSNP) then
+        NewSNP:= OldSNP;
+      Cells[CurCol, CurRow]:= FloatToStr(NewSNP);
+      ArraySNP500[Index].SNPClose:= NewSNP;
+    end;
+  end;
+  SaveArraySNP500;
+  LoadArraySNP500;
+  ShowGridSNP500;
+  SaveArraySNP500;
+end;
+
+procedure TForm1.ShowGridSNP500;
+var
+  i, k,  StartI, CurI: integer;
+  DiffStr, UPROStr: string;
+begin
+ StartI:= High(ArraySNP500);
+ with StringGrid1 do begin
+  for i:= 1 to RowCount - 1 do begin
+    CurI:= StartI - i + 1;
+    if CurI < 0 then begin  // out of Array
+      for k:= 1 to ColCount - 1 do begin
+        Cells[k, i]:= '';
+      end;
+    end else begin
+      with ArraySNP500[CurI] do begin
+        Cells[0, i]:= IntToStr(i);
+        Cells[1, i]:= FormatDateTime(BiffShortDateFormat, FDate);
+        Cells[2, i]:= Format('%f', [SNPClose]);  //FloatToStr(SNPClose);
+        DiffStr:= Format('%f', [(SNPDiff - 1) * 100]);
+        if SNPDiff > 1 then
+          DiffStr:= '+' + DiffStr + ' %'
+        else if SNPDiff < 1 then
+          DiffStr:= '-' + DiffStr + ' %';
+        Cells[3, i]:= DiffStr;   //FloatToStr(SNPDiff) + ' %';
+        Cells[4, i]:= IntToStr(VolGroup + 1);
+        if IsZero(UPROPer) then
+          UPROStr:= ''
+        else
+          UPROStr:= Format('%f', [UPROPer * 100]) + ' %';
+        //Cells[5, i]:= UPROStr;
+      end;
+    end;
+  end;
+ end; 
+end;
+
+procedure TForm1.ButtonAddDayClick(Sender: TObject);
+begin
+  AddSNP500(DateTimePicker2.Date,  StrToFloat(EditSNP500.Text));
+  ShowGridSNP500;
+  SaveArraySNP500;
+end;
+
+procedure TForm1.ButtonTodayUPROClick(Sender: TObject);
+var
+  Index, CurGroup: integer;
+  CurRerc: real;
+begin
+  if MessageDlg('Are you sure you updated Stocks ($), Gold ($), Montly Expences ($) and SnP500 quote?' +
+                ' If no, please press the Find Best Ratio button after update. '
+                , mtCustom, [mbYes, mbNo], 0) = mrYes then begin
+
+      ShowTodayUPRO;
+  {  Index:= High(ArraySNP500);
+    if Index < 1 then Exit;
+    CurGroup:=  ArraySNP500[Index].VolGroup;
+    CurRerc:= ArrVolGroup[CurGroup - 1];
+    }
+  end;
+
+end;
+
+procedure TForm1.ShowTodayUPRO;
+var
+  Index, CurGroup: integer;
+  CurPerc: real;
+begin
+    Index:= High(ArraySNP500);
+    if Index < 1 then Exit;
+    CurGroup:=  ArraySNP500[Index].VolGroup ;;
+    CurPerc:= ArrVolGroup[CurGroup ];
+    EditTodayGroup.Text:= Format('%d', [CurGroup + 1]);
+    EditTodayUPRO.Text:= Format('%f', [CurPerc * 100]) + ' %';
+    ArraySNP500[Index].UPROPer:= CurPerc;
 end;
 
 

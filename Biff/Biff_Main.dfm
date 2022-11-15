@@ -1,9 +1,9 @@
 object Form1: TForm1
-  Left = 890
-  Top = 179
+  Left = 932
+  Top = 114
   Width = 893
-  Height = 663
-  Caption = 'Biff v.3.10'
+  Height = 686
+  Caption = 'Biff v.3.14'
   Color = clBtnFace
   DefaultMonitor = dmDesktop
   Font.Charset = DEFAULT_CHARSET
@@ -27,9 +27,9 @@ object Form1: TForm1
   object Label7: TLabel
     Left = 16
     Top = 48
-    Width = 56
+    Width = 63
     Height = 13
-    Caption = 'Today Date'
+    Caption = 'Today'#39's Date'
   end
   object Label6: TLabel
     Left = 16
@@ -87,10 +87,36 @@ object Form1: TForm1
     Height = 13
     Caption = 'Number of Simulations'
   end
+  object Label11: TLabel
+    Left = 376
+    Top = 312
+    Width = 143
+    Height = 16
+    Caption = 'Today'#39's Volatility Group'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -13
+    Font.Name = 'MS Sans Serif'
+    Font.Style = []
+    ParentFont = False
+  end
+  object Label12: TLabel
+    Left = 376
+    Top = 376
+    Width = 140
+    Height = 16
+    Caption = 'Today'#39's UPRO percent'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -13
+    Font.Name = 'MS Sans Serif'
+    Font.Style = []
+    ParentFont = False
+  end
   object Memo1: TMemo
-    Left = 432
+    Left = 528
     Top = 8
-    Width = 441
+    Width = 345
     Height = 569
     ReadOnly = True
     ScrollBars = ssBoth
@@ -98,8 +124,8 @@ object Form1: TForm1
     OnKeyPress = Memo1KeyPress
   end
   object ButtonClearMemo: TButton
-    Left = 344
-    Top = 528
+    Left = 792
+    Top = 592
     Width = 73
     Height = 25
     Caption = 'Clear Memo'
@@ -108,7 +134,7 @@ object Form1: TForm1
   end
   object ButtonBestRatio: TButton
     Left = 32
-    Top = 528
+    Top = 512
     Width = 185
     Height = 25
     Caption = 'Find Best Ratio ( UPRO / VOO )'
@@ -117,7 +143,7 @@ object Form1: TForm1
   end
   object StatusBar1: TStatusBar
     Left = 0
-    Top = 606
+    Top = 629
     Width = 877
     Height = 19
     Panels = <
@@ -129,21 +155,13 @@ object Form1: TForm1
         Width = 50
       end>
   end
-  object ProgressBar: TProgressBar
-    Left = 432
-    Top = 576
-    Width = 441
-    Height = 17
-    Max = 1000
-    TabOrder = 4
-  end
   object ButtonStopFillTable: TButton
-    Left = 232
-    Top = 568
+    Left = 528
+    Top = 584
     Width = 185
     Height = 25
     Caption = 'Abort Fill Table Process'
-    TabOrder = 5
+    TabOrder = 4
     Visible = False
   end
   object EditScreenName: TEdit
@@ -152,7 +170,7 @@ object Form1: TForm1
     Width = 89
     Height = 21
     Enabled = False
-    TabOrder = 6
+    TabOrder = 5
     Text = 'User1'
   end
   object DateTimePicker1: TDateTimePicker
@@ -163,7 +181,7 @@ object Form1: TForm1
     Date = 28055.057939571760000000
     Time = 28055.057939571760000000
     DateMode = dmUpDown
-    TabOrder = 7
+    TabOrder = 6
   end
   object EditTodayRisk: TEdit
     Left = 160
@@ -171,7 +189,7 @@ object Form1: TForm1
     Width = 65
     Height = 21
     Enabled = False
-    TabOrder = 8
+    TabOrder = 7
     Text = '5'
     OnKeyPress = FloatEditKeyPress
   end
@@ -180,7 +198,7 @@ object Form1: TForm1
     Top = 120
     Width = 65
     Height = 21
-    TabOrder = 9
+    TabOrder = 8
     Text = '20000'
     OnKeyPress = NumericEditKeyPress
   end
@@ -189,8 +207,9 @@ object Form1: TForm1
     Top = 152
     Width = 65
     Height = 21
-    TabOrder = 10
+    TabOrder = 9
     Text = '2000'
+    OnKeyPress = NumericEditKeyPress
   end
   object EditTotalBankroll: TEdit
     Left = 160
@@ -198,7 +217,7 @@ object Form1: TForm1
     Width = 65
     Height = 21
     Enabled = False
-    TabOrder = 11
+    TabOrder = 10
     Text = '0'
   end
   object EditMonthlyExpences: TEdit
@@ -206,7 +225,7 @@ object Form1: TForm1
     Top = 216
     Width = 65
     Height = 21
-    TabOrder = 12
+    TabOrder = 11
     Text = '20'
     OnKeyPress = FloatEditKeyPress
   end
@@ -216,7 +235,7 @@ object Form1: TForm1
     Width = 65
     Height = 21
     Enabled = False
-    TabOrder = 13
+    TabOrder = 12
     Text = '2000'
   end
   object EditTodayDayLeft: TEdit
@@ -225,7 +244,7 @@ object Form1: TForm1
     Width = 65
     Height = 21
     Enabled = False
-    TabOrder = 14
+    TabOrder = 13
     Text = '2000'
   end
   object CheckBoxAdvanced: TCheckBox
@@ -234,7 +253,7 @@ object Form1: TForm1
     Width = 121
     Height = 17
     Caption = 'I am advanced user'
-    TabOrder = 15
+    TabOrder = 14
     OnClick = CheckBoxAdvancedClick
   end
   object EditNumSim: TEdit
@@ -243,7 +262,7 @@ object Form1: TForm1
     Width = 65
     Height = 21
     Enabled = False
-    TabOrder = 16
+    TabOrder = 15
     Text = '25000'
     OnKeyPress = NumericEditKeyPress
   end
@@ -256,7 +275,7 @@ object Form1: TForm1
     Checked = True
     Enabled = False
     State = cbChecked
-    TabOrder = 17
+    TabOrder = 16
   end
   object EditUPROBankr: TEdit
     Left = 160
@@ -264,32 +283,33 @@ object Form1: TForm1
     Width = 65
     Height = 21
     Enabled = False
-    TabOrder = 18
+    TabOrder = 17
     Text = '50000'
     OnKeyPress = NumericEditKeyPress
   end
   object ButtonRefreshParameter: TButton
-    Left = 32
-    Top = 448
+    Left = 528
+    Top = 600
     Width = 185
     Height = 25
-    Caption = 'Refresh Parameter'
-    TabOrder = 19
+    Caption = 'Refresh Parameters'
+    TabOrder = 18
+    Visible = False
     OnClick = ButtonRefreshParameterClick
   end
   object ButtonCalculateRisk: TButton
     Left = 32
-    Top = 488
+    Top = 464
     Width = 185
     Height = 25
     Caption = 'Recalculate Daily Risks'
-    TabOrder = 20
+    TabOrder = 19
     OnClick = ButtonCalculateRiskClick
   end
   object ListBoxVolGroup: TListBox
-    Left = 264
-    Top = 40
-    Width = 137
+    Left = 256
+    Top = 312
+    Width = 113
     Height = 305
     ItemHeight = 13
     Items.Strings = (
@@ -316,16 +336,105 @@ object Form1: TForm1
       '21:'
       '22:'
       '23:')
-    TabOrder = 21
+    TabOrder = 20
   end
   object ButtonCalculateEV: TButton
     Left = 32
-    Top = 568
+    Top = 560
     Width = 185
     Height = 25
     Caption = 'Calculate EV'
-    TabOrder = 22
+    TabOrder = 21
     OnClick = ButtonCalculateEVClick
+  end
+  object Panel1: TPanel
+    Left = 256
+    Top = 8
+    Width = 265
+    Height = 289
+    Caption = 'Panel1'
+    TabOrder = 22
+    object StringGrid1: TStringGrid
+      Left = 0
+      Top = 40
+      Width = 320
+      Height = 249
+      DefaultColWidth = 55
+      DefaultRowHeight = 16
+      RowCount = 14
+      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goColSizing, goEditing]
+      TabOrder = 0
+      OnExit = StringGrid1Exit
+      OnGetEditText = StringGrid1GetEditText
+      OnKeyPress = StringGrid1KeyPress
+      OnSelectCell = StringGrid1SelectCell
+      OnSetEditText = StringGrid1SetEditText
+    end
+    object DateTimePicker2: TDateTimePicker
+      Left = 8
+      Top = 8
+      Width = 97
+      Height = 25
+      Date = 0.071291145832219630
+      Time = 0.071291145832219630
+      DateMode = dmUpDown
+      TabOrder = 1
+    end
+    object EditSNP500: TEdit
+      Left = 112
+      Top = 8
+      Width = 65
+      Height = 21
+      TabOrder = 2
+      Text = '0'
+      OnKeyPress = FloatEditKeyPress
+    end
+    object ButtonAddDay: TButton
+      Left = 184
+      Top = 8
+      Width = 75
+      Height = 25
+      Caption = 'Add SnP 500'
+      TabOrder = 3
+      OnClick = ButtonAddDayClick
+    end
+  end
+  object EditTodayGroup: TEdit
+    Left = 392
+    Top = 336
+    Width = 113
+    Height = 24
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -13
+    Font.Name = 'MS Sans Serif'
+    Font.Style = []
+    ParentFont = False
+    TabOrder = 23
+    Text = '0'
+  end
+  object EditTodayUPRO: TEdit
+    Left = 392
+    Top = 400
+    Width = 113
+    Height = 37
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -24
+    Font.Name = 'MS Sans Serif'
+    Font.Style = [fsBold]
+    ParentFont = False
+    TabOrder = 24
+    Text = '0'
+  end
+  object ButtonTodayUPRO: TButton
+    Left = 376
+    Top = 448
+    Width = 145
+    Height = 33
+    Caption = 'Show Today'#39's UPRO Ratio'
+    TabOrder = 25
+    OnClick = ButtonTodayUPROClick
   end
   object Timer1: TTimer
     OnTimer = Timer1Timer
