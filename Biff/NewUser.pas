@@ -176,13 +176,13 @@ begin
   if (not IsClosing) then
     Exit;
 
-  Terminating := IsClosing;
-  
   if (CurForm <> nil) and (not CalculationIsRuning) then begin
     SaveIniFile;
   //  CurForm:= Self;
     SaveProfileIniFile;
   end;
+
+  Terminating := IsClosing;
 
   if Assigned(Form1) then  begin
     IsClosing:= true;

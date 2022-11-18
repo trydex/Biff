@@ -317,7 +317,7 @@ var
   AFileName: string;
   i: integer;
 begin
-  if Terminating then Exit;
+  if Terminating and CalculationIsRuning then Exit;
   AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
   AIniFile:= IniFiles.TIniFile.Create(AFileName);
   try
@@ -380,7 +380,7 @@ var
   AFileName: string;
   i: integer;
 begin
-  if Terminating then Exit;
+  if Terminating and CalculationIsRuning then Exit;
   if CurProfile = '' then Exit;
   AFileName:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\profile.ini';
   AIniFile:= IniFiles.TIniFile.Create(AFileName);
@@ -453,7 +453,7 @@ var
   i: integer;
   CurDate, DeathDate: TDate;
 begin
-  if Terminating then Exit;
+  if Terminating and CalculationIsRuning then Exit;
   FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\TableDayRisk.txt';
   AssignFile(F, FileNameStr);
   Rewrite(F);
@@ -550,7 +550,7 @@ var
   S, ArchiveNameStr: string;
   i: integer;
 begin
-  if Terminating then Exit;
+  if Terminating and CalculationIsRuning then Exit;
   ArchiveNameStr:= ExtractFilePath(GetModuleName(0)) + '\Profiles\' + CurProfile + '\Archive Ratio';
   ForceDirectories(ArchiveNameStr);
   ArchiveNameStr:= ArchiveNameStr + '\' + SetProfileTableName;
@@ -800,7 +800,7 @@ var
   i: integer;
   CurDate, DeathDate: TDate;
 begin
-  if Terminating then Exit;
+  if Terminating and CalculationIsRuning then Exit;
   //FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\TableDayRisk.txt';
   FileNameStr:= ExtractFilePath(ParamStr(0)) + 'SNP_500.txt';
   AssignFile(F, FileNameStr);
