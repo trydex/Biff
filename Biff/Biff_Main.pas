@@ -1391,9 +1391,8 @@ begin    // main function
   Result:= false;
   if CurRisk < AMyBankr then Exit;
   Result:= true;
-  if MessageDlg('You Stocks Capital is too small. '
-                + 'Do you want calculate minimum needed capital?' , mtCustom, [mbYes, mbNo], 0) = mrYes then begin
-
+  if Windows.MessageBox(0, 'You Stocks Capital is too small. '
+                + 'Do you want calculate minimum needed capital?', 'biff', MB_YESNO+MB_SETFOREGROUND) = mrYes then begin
     Last:= ARasxod * ANumDay / 2;
     repeat
       if Terminating then Exit;
