@@ -152,16 +152,6 @@ procedure TFormNewUser.ButtonCalcRiskClick(Sender: TObject);
 begin
   if not GetNewUserParameter then Exit;
   CurForm:= Self;
-  with CurParameter do begin
-    Memo1.Lines.Add('');
-    TodayRisk:= TargetRisk;
-    Form1.StartTimer(true, 'Calculate min risk for your parameters ...');
-    if Form1.CalculateRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim * 10) then begin
-      Memo1.Lines.Add('');
-      Form1.StopTimer('Calculating is finished.');
-      Exit;
-    end;
-  end;  
   TCaclulationThread.Create(CaseDailyRisk);
 end;
 

@@ -903,7 +903,7 @@ end;
 procedure TForm1.CalculateRiskForNewUser();
 begin
   with CurParameter, FormNewUser do begin
-   { Memo1.Lines.Add('');
+    Memo1.Lines.Add('');
     Memo1.Lines.Add('Calculate min risk for your parameter ...');
 
     if CalculateRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim ) then begin
@@ -911,8 +911,7 @@ begin
       Memo1.Lines.Add('Calculating is finished.');
       Exit;
     end;
-    }
-
+    
     StartTimer(true, 'Calculate Daily Risks ...');
     TodayRisk:= TargetRisk;
     Memo1.Lines.Add('');
