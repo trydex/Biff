@@ -94,6 +94,8 @@ const
     0.00494001333, 0.005232215, 0.00550140167, 0.005775275, 0.00607376, 0.00642635167, 0.00683055, 0.0072788175,
     0.0077491975, 0.00835090583, 0.0091001775, 0.01011414667, 0.01150477083, 0.0135928075, 0.01802705333, 1);
 
+
+
 type    
   TCaclulationThread = class(TThread)
   private
@@ -115,7 +117,6 @@ type
     constructor Create(FirstSeed: Cardinal; CaclBankruptcyAlgo: TCaclBankruptcyAlgo; ANumSim, ANumDay, ACurDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure Execute; override;
     destructor Destroy; override;
-    //procedure DoTerminate; override;
   end;
 
   TCaclulareRiskEvThread = class(TThread)
@@ -129,8 +130,8 @@ type
     constructor Create(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSimStart, ANumSimEnd: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
     procedure Execute; override;
     destructor Destroy; override;
-    //procedure DoTerminate; override;
   end;
+
  
 var
   Utils: TUtils;
@@ -142,6 +143,10 @@ var
   StartTimeTimer: TDateTime;
   ArraySNP500: array of TSNP500;
   CurCell: TCurCell;
+
+  IsClosing: bool;
+  Terminating: bool;
+  CalculationIsRuning: bool;
   
  // procedure FindBestRatioProcedure();
   procedure LoadIniFile;
@@ -184,6 +189,7 @@ end;
 
 procedure TCaclulationThread.Execute;
 begin
+  if Terminating then Exit;
   with Form1 do begin  // Old Form1
     EnableControls(false);
     FindBestRatioThreadSwitcher(self.ThreadCase);
@@ -221,6 +227,7 @@ end;
 
 procedure TCaclBankruptcyThread.Execute;
 begin
+  if Terminating then Exit;
   if CaclBankruptcyAlgo = AlgoSimple then
     Form1.CalcNumBankruptcySimpleInternal(FirstSeed, ANumSim, ANumDay, ACapital, ARasxod, StartRatio)
   else if CaclBankruptcyAlgo = AlgoAdvanced then
@@ -256,6 +263,7 @@ end;
 
 procedure TCaclulareRiskEvThread.Execute;
 begin
+  if Terminating then Exit;
   Form1.CalculateRiskEVInternal(FirstSeed, AStartCapital, ARasxod, AMyBankr, ANumDay, ANumSimStart, ANumSimEnd, ArrBankr, ArrayEV);
 end;
 
@@ -309,6 +317,7 @@ var
   AFileName: string;
   i: integer;
 begin
+  if Terminating then Exit;
   AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
   AIniFile:= IniFiles.TIniFile.Create(AFileName);
   try
@@ -371,6 +380,7 @@ var
   AFileName: string;
   i: integer;
 begin
+  if Terminating then Exit;
   if CurProfile = '' then Exit;
   AFileName:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\profile.ini';
   AIniFile:= IniFiles.TIniFile.Create(AFileName);
@@ -443,6 +453,7 @@ var
   i: integer;
   CurDate, DeathDate: TDate;
 begin
+  if Terminating then Exit;
   FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\TableDayRisk.txt';
   AssignFile(F, FileNameStr);
   Rewrite(F);
@@ -539,6 +550,7 @@ var
   S, ArchiveNameStr: string;
   i: integer;
 begin
+  if Terminating then Exit;
   ArchiveNameStr:= ExtractFilePath(GetModuleName(0)) + '\Profiles\' + CurProfile + '\Archive Ratio';
   ForceDirectories(ArchiveNameStr);
   ArchiveNameStr:= ArchiveNameStr + '\' + SetProfileTableName;
@@ -788,6 +800,7 @@ var
   i: integer;
   CurDate, DeathDate: TDate;
 begin
+  if Terminating then Exit;
   //FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\TableDayRisk.txt';
   FileNameStr:= ExtractFilePath(ParamStr(0)) + 'SNP_500.txt';
   AssignFile(F, FileNameStr);

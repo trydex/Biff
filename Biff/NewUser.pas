@@ -151,6 +151,7 @@ end;
 procedure TFormNewUser.ButtonCalcRiskClick(Sender: TObject);
 begin
   if not GetNewUserParameter then Exit;
+  CalculationIsRuning := true;
   CurForm:= Self;
   TCaclulationThread.Create(CaseDailyRisk);
 end;
@@ -170,20 +171,23 @@ end;
 procedure TFormNewUser.FormCloseQuery(Sender: TObject;
   var CanClose: Boolean);
 begin
-  if MessageDlg('Do you really want to close?', mtCustom, [mbYes, mbNo], 0) <> mrYes then begin
-    CanClose := false;
+  CanClose := false;
+  IsClosing:= MessageDlg('Do you really want to close?', mtCustom, [mbYes, mbNo], 0) = mrYes;
+  if (not IsClosing) then
     Exit;
-  end;
-  if CurForm <> nil then begin
+
+  Terminating := IsClosing;
+  
+  if (CurForm <> nil) and (not CalculationIsRuning) then begin
     SaveIniFile;
   //  CurForm:= Self;
     SaveProfileIniFile;
   end;
+
   if Assigned(Form1) then  begin
-    Form1.IsClosing:= true;
+    IsClosing:= true;
     Form1.Close;
   end;
-
 end;
 
 procedure TFormNewUser.FormDestroy(Sender: TObject);
