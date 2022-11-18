@@ -38,6 +38,7 @@ type
     CheckBoxShowCalculating: TCheckBox;
     StatusBar1: TStatusBar;
     Timer1: TTimer;
+    ButtonAddUser: TButton;
     procedure ButtonAddNewUserClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure CheckBoxAdvancedClick(Sender: TObject);
@@ -47,6 +48,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure NumericEditKeyPress(Sender: TObject; var Key: Char);
     procedure FloatEditKeyPress(Sender: TObject; var Key: Char);
+    procedure ButtonAddUserClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -126,6 +128,34 @@ begin
 
 end;
 
+procedure TFormNewUser.ButtonAddUserClick(Sender: TObject);
+var i: integer;
+begin
+  for i:= 0 to AllProfiles.Count - 1 do begin
+    if Allprofiles[i] = EditScreenName.Text then begin
+      MessageDlg('Your screenname already exists. Please choose another.' , mtError, [mbYes], 0);
+      Exit;
+    end;
+  end;
+
+  CurForm:= Self;
+//  ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + EditScreenName.Text);
+
+  if not GetNewUserParameter then Exit;
+  ButtonAddUser.Enabled:= false;
+  CalculationIsRuning := true;
+  TCaclulationThread.Create(CaseDailyRisk);
+
+{    SaveIniFile;
+    SaveProfileIniFile;
+    ButtonCalcRisk.Enabled:= true
+  end else begin
+    ButtonCalcRisk.Enabled:= false;
+  end;  }
+
+end;
+
+
 procedure TFormNewUser.ButtonAddNewUserClick(Sender: TObject);
 var i: integer;
 begin
@@ -141,7 +171,6 @@ begin
   if GetNewUserParameter then begin
     SaveIniFile;
     SaveProfileIniFile;
-//  if CurParameter.TodayDayLeft > 0 then
     ButtonCalcRisk.Enabled:= true
   end else begin
     ButtonCalcRisk.Enabled:= false;
@@ -205,5 +234,6 @@ procedure TFormNewUser.FloatEditKeyPress(Sender: TObject; var Key: Char);
 begin
   Form1.FloatEditKeyPress(Sender, Key);
 end;
+
 
 end.

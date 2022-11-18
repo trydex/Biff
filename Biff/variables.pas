@@ -454,6 +454,9 @@ var
   CurDate, DeathDate: TDate;
 begin
   if Terminating and CalculationIsRuning then Exit;
+  FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile;
+  if not DirectoryExists(FileNameStr) then Exit;   // not save if User not created yet
+
   FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\TableDayRisk.txt';
   AssignFile(F, FileNameStr);
   Rewrite(F);
@@ -547,10 +550,13 @@ end;
 procedure SaveArrVolGroup(AArrVolGroup: TArrVolGroup);
 var
   F: TextFile;
-  S, ArchiveNameStr: string;
+  S, ArchiveNameStr, FileNameStr: string;
   i: integer;
 begin
   if Terminating and CalculationIsRuning then Exit;
+  FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile;
+  if not DirectoryExists(FileNameStr) then Exit;   // not save if User not created yet
+
   ArchiveNameStr:= ExtractFilePath(GetModuleName(0)) + '\Profiles\' + CurProfile + '\Archive Ratio';
   ForceDirectories(ArchiveNameStr);
   ArchiveNameStr:= ArchiveNameStr + '\' + SetProfileTableName;

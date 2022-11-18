@@ -944,15 +944,27 @@ begin
     Memo1.Lines.Add('All calculating is finished.');
     StopTimer('Calculate Daily Risks finished.');
     Memo1.Lines.Add('');
-    if CurForm is TFormNewUser then begin
+{    if CurForm is TFormNewUser then begin
       Memo1.Lines.Add('Now You can Go to Main Window.');
     end;
   end;
   if Assigned(FormNewUser) then begin
     FormNewUser.ButtonGoMainForm.Enabled:= true;
+  end;    }
+    ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + ScreenName);
+    SaveIniFile;
+    SaveProfileIniFile;
+    ShowArrVolGroupForm(ArrVolGroup);
+    SaveArrVolGroup(ArrVolGroup);
+    SaveTableDayRisk(TableDayRisk);
+    FormNewUser.Visible:= false;
   end;
-  ShowArrVolGroupForm(ArrVolGroup);
-  SaveArrVolGroup(ArrVolGroup);
+  CurForm:= Form1;
+  LoadIniFile;
+  Form1.SetParameter;
+  Form1.GetMainParameter;
+  Form1.Visible:= true;
+
 end;
 
 procedure TForm1.CalculateRiskForMain();

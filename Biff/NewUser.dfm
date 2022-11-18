@@ -163,11 +163,12 @@ object FormNewUser: TFormNewUser
   end
   object ButtonAddNewUser: TButton
     Left = 32
-    Top = 464
+    Top = 488
     Width = 185
     Height = 25
     Caption = 'Add New User'
     TabOrder = 8
+    Visible = False
     OnClick = ButtonAddNewUserClick
   end
   object Memo1: TMemo
@@ -218,22 +219,24 @@ object FormNewUser: TFormNewUser
   end
   object ButtonCalcRisk: TButton
     Left = 32
-    Top = 504
+    Top = 520
     Width = 185
     Height = 25
     Caption = 'Calculate Daily Risks'
     Enabled = False
     TabOrder = 14
+    Visible = False
     OnClick = ButtonCalcRiskClick
   end
   object ButtonGoMainForm: TButton
     Left = 32
-    Top = 544
+    Top = 552
     Width = 185
     Height = 25
     Caption = 'Go to Main Window'
     Enabled = False
     TabOrder = 15
+    Visible = False
     OnClick = ButtonGoMainFormClick
   end
   object EditTodayDayLeft: TEdit
@@ -268,6 +271,15 @@ object FormNewUser: TFormNewUser
       item
         Width = 50
       end>
+  end
+  object ButtonAddUser: TButton
+    Left = 32
+    Top = 456
+    Width = 185
+    Height = 25
+    Caption = 'Add New User'
+    TabOrder = 19
+    OnClick = ButtonAddUserClick
   end
   object Timer1: TTimer
     Left = 632

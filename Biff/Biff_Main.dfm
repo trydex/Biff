@@ -3,7 +3,7 @@ object Form1: TForm1
   Top = 155
   Width = 893
   Height = 686
-  Caption = 'Biff v.3.15'
+  Caption = 'Biff v.3.16'
   Color = clBtnFace
   DefaultMonitor = dmDesktop
   Font.Charset = DEFAULT_CHARSET
