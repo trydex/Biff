@@ -31,7 +31,7 @@ type
     Label9: TLabel;
     EditTotalBankroll: TEdit;
     CheckBoxAdvanced: TCheckBox;
-    ButtonCalculateRisk: TButton;
+    ButtonCalcRisk: TButton;
     ButtonGoMainForm: TButton;
     Label10: TLabel;
     EditTodayDayLeft: TEdit;
@@ -41,7 +41,7 @@ type
     procedure ButtonAddNewUserClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure CheckBoxAdvancedClick(Sender: TObject);
-    procedure ButtonCalculateRiskClick(Sender: TObject);
+    procedure ButtonCalcRiskClick(Sender: TObject);
     procedure ButtonGoMainFormClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormDestroy(Sender: TObject);
@@ -142,13 +142,13 @@ begin
     SaveIniFile;
     SaveProfileIniFile;
 //  if CurParameter.TodayDayLeft > 0 then
-    ButtonCalculateRisk.Enabled:= true
+    ButtonCalcRisk.Enabled:= true
   end else begin
-    ButtonCalculateRisk.Enabled:= false;
+    ButtonCalcRisk.Enabled:= false;
   end;
 end;
 
-procedure TFormNewUser.ButtonCalculateRiskClick(Sender: TObject);
+procedure TFormNewUser.ButtonCalcRiskClick(Sender: TObject);
 begin
   if not GetNewUserParameter then Exit;
   CurForm:= Self;

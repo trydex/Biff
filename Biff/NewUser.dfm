@@ -1,6 +1,6 @@
 object FormNewUser: TFormNewUser
-  Left = 134
-  Top = 182
+  Left = 170
+  Top = 157
   Width = 729
   Height = 640
   Caption = 'New User'
@@ -216,7 +216,7 @@ object FormNewUser: TFormNewUser
     TabOrder = 13
     OnClick = CheckBoxAdvancedClick
   end
-  object ButtonCalculateRisk: TButton
+  object ButtonCalcRisk: TButton
     Left = 32
     Top = 504
     Width = 185
@@ -224,7 +224,7 @@ object FormNewUser: TFormNewUser
     Caption = 'Calculate Daily Risks'
     Enabled = False
     TabOrder = 14
-    OnClick = ButtonCalculateRiskClick
+    OnClick = ButtonCalcRiskClick
   end
   object ButtonGoMainForm: TButton
     Left = 32

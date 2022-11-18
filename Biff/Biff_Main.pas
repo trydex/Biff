@@ -221,6 +221,7 @@ begin
   ShowGridSNP500;
   PrepareGrid;
   LoadArrVolGroup(ArrVolGroup);
+  OrigArrVolGroup:= ArrVolGroup;
   ShowArrVolGroupForm(ArrVolGroup);
   ShowTodayUPRO;
 
@@ -689,10 +690,8 @@ begin
     end;
 
     /////  only this line differ from original FindBestRatio
+
     Delta:= CurRatio / MaxI - OffSet;
-//    if RadioGroupDeltaMethod.ItemIndex = 0 then begin   // Add
-//      Memo1.Lines.Add(Format('DeltaProc = %.1f ', [Delta * 100]));
-//      ArrVolGroup:= CorrectArrVolGroup(OrigArrVolGroup, Delta); // 500 = 0
     begin                                      // Multiplay
       Delta:= 1 + Delta ;
       MemoLinesAdd(Format('DeltaProc = *%.4f ', [Delta]));
@@ -880,9 +879,8 @@ begin
       OrigArrVolGroup:= SmoothingArrVolGroup(OrigArrVolGroup);
       MemoLinesAdd('Original Array of Volatility Group:');
       ShowArrVolGroup(OrigArrVolGroup);
-        //BestRatio:= FindBestRatio_12DayVol(StartCapital, Rasxod, MyBankr, NumDay, NumSim);
         BestRatio:= FindBestRatio_12DayVol(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim);
-      BestRatio:= BestRatio - Round(0.5 * MaxI);
+     // BestRatio:= BestRatio - Round(0.5 * MaxI);
       MemoLinesAdd('Final Array of Volatility Group:');
       OrigArrVolGroup:= ArrVolGroup;
       ShowArrVolGroup(ArrVolGroup);
@@ -928,7 +926,6 @@ begin
     Memo1.Lines.Add('');
     Memo1.Lines.Add('Calculate 3 / 4 ...');
     Memo1.Lines.Add(Format('Find ratio for 23 groups when Risk = %f',[TodayRisk * 100]));
-    //MemoLinesAdd(Format('TodayRisk = %f',[TodayRisk * 100]));
     FindBestRatioProcedure();    // second iteration with TodayRisk
     Memo1.Lines.Add('');
     Memo1.Lines.Add('Calculate 4 / 4 ...');
@@ -1501,13 +1498,23 @@ begin
         EditMonthlyExpences.Enabled:= enable;
         DateTimePicker2.Enabled:= enable;
         EditSNP500.Enabled:= enable;
-        CheckBoxAdvanced.Enabled:= enable;
-        CheckBoxBankruptcy.Enabled:= enable;
-        EditNumSim.Enabled:= enable;
-        EditUPROBankr.Enabled:= enable;
         EditTodayGroup.Enabled:= enable;
         EditTodayUPRO.Enabled:= enable;
 
+        CheckBoxAdvanced.Enabled:= enable;
+        enable:= enable and CheckBoxAdvanced.Checked;
+        CheckBoxBankruptcy.Enabled:= enable;
+        EditNumSim.Enabled:= enable;
+        EditUPROBankr.Enabled:= enable;
+
+  if Assigned(CurForm) then begin
+    if CurForm is TFormNewUser then begin
+      with TFormNewUser(CurForm) do begin
+        ButtonCalcRisk.Enabled:= enable;
+      end;  
+    end;
+  end;
+  
 end;
 
 procedure TForm1.WMUpdatePB(var msg: TMessage);
