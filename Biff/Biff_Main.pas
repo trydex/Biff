@@ -127,6 +127,7 @@ type
     procedure CalculateBestRatioMain();
     procedure CalculateRiskForNewUser();
     procedure CalculateRiskForMain();
+    procedure UpdateUIAfterCalculateRiskForNewUser();
 
   //  function FindBestRatioAdv(ACapital, ARasxod, APercent: real; ANumDay, ANumSim, AStepDay: integer): integer;  // Result 0..100 Perc for UPRO
  //   procedure CalcNumBankruptcyAdvInternal(FirstSeed: Cardinal; AInnerNumSim, ANumDay, AStepDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
@@ -951,20 +952,27 @@ begin
   if Assigned(FormNewUser) then begin
     FormNewUser.ButtonGoMainForm.Enabled:= true;
   end;    }
-    ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + ScreenName);
-    SaveIniFile;
-    SaveProfileIniFile;
-    ShowArrVolGroupForm(ArrVolGroup);
-    SaveArrVolGroup(ArrVolGroup);
-    SaveTableDayRisk(TableDayRisk);
-    FormNewUser.Visible:= false;
+    ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + ScreenName);  
   end;
+
+  // Update UI only from main thread
+  TThread.Synchronize(nil, UpdateUIAfterCalculateRiskForNewUser);
+end;
+
+procedure TForm1.UpdateUIAfterCalculateRiskForNewUser();
+begin
+  SaveIniFile;
+  SaveProfileIniFile;
+  ShowArrVolGroupForm(ArrVolGroup);
+  SaveArrVolGroup(ArrVolGroup);
+  SaveTableDayRisk(TableDayRisk);
+  FormNewUser.Visible:= false;
+
   CurForm:= Form1;
   LoadIniFile;
   Form1.SetParameter;
   Form1.GetMainParameter;
   Form1.Visible:= true;
-
 end;
 
 procedure TForm1.CalculateRiskForMain();
@@ -1429,7 +1437,11 @@ begin    // main function
 
     MemoLinesAdd(Format('Min Capital = %.0f ', [Last]));
 
+  end
+  else begin
+    FormNewUser.ButtonAddUser.Enabled:= true;
   end;
+
 end;
 
 function TForm1.GetMainParameter: boolean;
