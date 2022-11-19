@@ -386,6 +386,9 @@ var
 begin
   if Terminating and CalculationIsRuning then Exit;
   if CurProfile = '' then Exit;
+  AFileName:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile;
+  if not DirectoryExists(AFileName) then Exit;   // not save if User not created yet
+
   AFileName:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\profile.ini';
   AIniFile:= IniFiles.TIniFile.Create(AFileName);
   try
