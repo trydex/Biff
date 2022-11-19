@@ -75,6 +75,7 @@ begin
   CurForm:= Self;
   LoadIniFile;
   GetNewUserParameter;
+  MessageOnQuitNewUser:= 'Do you really want to close?'; 
 end;
 
 
@@ -131,6 +132,7 @@ end;
 procedure TFormNewUser.ButtonAddUserClick(Sender: TObject);
 var i: integer;
 begin
+  MessageOnQuitNewUser:= 'Do you really want to close?'; 
   for i:= 0 to AllProfiles.Count - 1 do begin
     if Allprofiles[i] = EditScreenName.Text then begin
       MessageDlg('Your screenname already exists. Please choose another.' , mtError, [mbYes], 0);
@@ -142,17 +144,17 @@ begin
 //  ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + EditScreenName.Text);
 
   if not GetNewUserParameter then Exit;
+
   ButtonAddUser.Enabled:= false;
+  EditScreenName.Enabled:= false;
+  DateTimePicker1.Enabled:= false;
+  EditTargetRisk.Enabled:= false;
+  EditStocks.Enabled:= false;
+  EditGold.Enabled:= false;
+  EditMonthlyExpences.Enabled:= false;
+
   CalculationIsRuning := true;
   TCaclulationThread.Create(CaseDailyRisk);
-
-{    SaveIniFile;
-    SaveProfileIniFile;
-    ButtonCalcRisk.Enabled:= true
-  end else begin
-    ButtonCalcRisk.Enabled:= false;
-  end;  }
-
 end;
 
 
@@ -201,13 +203,14 @@ procedure TFormNewUser.FormCloseQuery(Sender: TObject;
   var CanClose: Boolean);
 begin
   CanClose := false;
-  IsClosing:= MessageDlg('Do you really want to close?', mtCustom, [mbYes, mbNo], 0) = mrYes;
+//  IsClosing:= MessageDlg('Do you really want to close?', mtCustom, [mbYes, mbNo], 0) = mrYes;
+  IsClosing:= MessageDlg(MessageOnQuitNewUser, mtCustom, [mbYes, mbNo], 0) = mrYes;
+
   if (not IsClosing) then
     Exit;
 
   if (CurForm <> nil) and (not CalculationIsRuning) then begin
     SaveIniFile;
-  //  CurForm:= Self;
     SaveProfileIniFile;
   end;
 

@@ -61,7 +61,7 @@ type
 
   TParameter = record
     ScreenName: string;
-    DateOfBirth: TDate;
+    DateOfBirth, StartDate: TDate;
     TargetRisk, RiskWithDeath, TodayRisk: real;
     StocksCapital, GoldCapital, TotalBankroll: real;
     MonthlyExpences, DailyExpences: real;
@@ -147,6 +147,8 @@ var
   IsClosing: bool;
   Terminating: bool;
   CalculationIsRuning: bool;
+
+  MessageOnQuitNewUser: string;
   
  // procedure FindBestRatioProcedure();
   procedure LoadIniFile;
@@ -355,6 +357,8 @@ begin
     with CurParameter do begin
       ScreenName:= AIniFile.ReadString('Parameter', 'ScreenName', 'New User');
       DateOfBirth:= Utils.StrToDateEx(AIniFile.ReadString('Parameter', 'DateOfBirth', ''));
+      StartDate:= Utils.StrToDateDefEx(AIniFile.ReadString('Parameter', 'StartDate', ''), Date);
+
       TargetRisk:= AIniFile.ReadFloat('Parameter', 'TargetRisk', 0) / 100;
       TodayRisk:= AIniFile.ReadFloat('Parameter', 'TodayRisk', 0) / 100;
       StocksCapital:= AIniFile.ReadFloat('Parameter', 'StocksCapital', 20000);
@@ -388,6 +392,7 @@ begin
    with CurParameter do begin
     AIniFile.WriteString('Parameter', 'ScreenName', ScreenName);
     AIniFile.WriteString('Parameter', 'DateOfBirth', FormatDateTime(BiffShortDateFormat, DateOfBirth));
+    AIniFile.WriteString('Parameter', 'StartDate', FormatDateTime(BiffShortDateFormat, StartDate));
     AIniFile.WriteFloat('Parameter', 'TargetRisk', TargetRisk * 100);
     AIniFile.WriteFloat('Parameter', 'TodayRisk', TodayRisk * 100);
     AIniFile.WriteFloat('Parameter', 'StocksCapital', StocksCapital);

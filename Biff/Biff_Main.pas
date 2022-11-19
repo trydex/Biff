@@ -108,6 +108,7 @@ type
     ArrProbDeath: array of real;
     ArrProbDeath2: array[15..84] of array of real;
 
+    procedure SetProfile;
     procedure WMUpdatePB(var msg: TMessage); message WM_UPDATE_PB;
     procedure OpenPriceFile;
     procedure OpenPriceFileByName(var APriceData: TArrPriceData; AFileName: string);
@@ -150,6 +151,7 @@ type
     procedure EnterCurCell;
     procedure ShowGridSNP500;
     procedure ShowTodayUPRO;
+    procedure SetLastDate;
  end;
 
 var
@@ -165,6 +167,8 @@ procedure TForm1.FormCreate(Sender: TObject);
     CanShow: boolean;
   Label BeginProfile;
 begin
+  Version := Caption;
+  CurProfile:= '';
   IsInflation:= true;
   CanShow:= false;
   GetAllProfiles;
@@ -184,12 +188,13 @@ begin
     if FormLogin.ModalResult = mrOk then begin
       CurProfile:= AllProfiles[Formlogin.ListBox1.ItemIndex];
       CurForm:= Self;
-      LoadTableDayRisk(TableDayRisk);
+    {  LoadTableDayRisk(TableDayRisk);
       LoadProfileIniFile;
       SetParameter;
       GetMainParameter;;
+      }
+      SetProfile;
       CanShow:= true;
-      //Self.Visible:= true;
     end else if FormLogin.ModalResult = mrAbort then begin
       goto BeginProfile;
     end else begin
@@ -219,11 +224,12 @@ begin
   LoadArraySNP500;
   ShowGridSNP500;
   PrepareGrid;
+  {
   LoadArrVolGroup(ArrVolGroup);
   OrigArrVolGroup:= ArrVolGroup;
   ShowArrVolGroupForm(ArrVolGroup);
   ShowTodayUPRO;
-
+   }
   for i:= 0 to MaxI do begin
     with ZeroRatioArray[i] do begin
       UPROPerc:= i / MaxI;
@@ -238,9 +244,29 @@ begin
    Self.Visible:= true;
 end;
 
+procedure TForm1.SetProfile;
+begin
+  if CurProfile = '' then Exit;
+      LoadTableDayRisk(TableDayRisk);
+      LoadIniFile;
+      LoadProfileIniFile;
+      SetParameter;
+      GetMainParameter;;
+  LoadArrVolGroup(ArrVolGroup);
+  OrigArrVolGroup:= ArrVolGroup;
+  ShowArrVolGroupForm(ArrVolGroup);
+  ShowTodayUPRO;
+  with CurParameter do begin
+    Caption:= Version + ',  Born: ' + FormatDateTime(BiffShortDateFormat, DateOfBirth);
+    Caption:= Caption + ',  Risk: ' + Format('%.2f', [TargetRisk * 100]) + '%';
+    Caption:= Caption + ',  Start: ' + FormatDateTime(BiffShortDateFormat, StartDate);
+  end;
+
+end;
+
 procedure TForm1.SetLogFileName;
 begin
-  LogFileName:= Caption + '_'+  FormatDateTime('yyyy-mm-dd-hh-nn-ss', Now) + '.txt';
+  LogFileName:= Version + '_'+  FormatDateTime('yyyy-mm-dd-hh-nn-ss', Now) + '.txt';
 end;
 
 procedure TForm1.SaveLog;
@@ -528,7 +554,7 @@ begin
   TotalStepsTime := TotalStepsTime + (c2-c1)/f*1000;
   if CurrentTicks - StepsThrottling >= 1000 then begin
     StepsThrottling := GetTickCount;
-    Caption := Version + '  Total steps: ' + IntToStr(TotalSteps) + ' av.step msec: ' + Format('%.1f', [TotalStepsTime/TotalSteps]);
+    //Caption := Version + '  Total steps: ' + IntToStr(TotalSteps) + ' av.step msec: ' + Format('%.1f', [TotalStepsTime/TotalSteps]);
   end;
 end;
 
@@ -952,7 +978,8 @@ begin
   if Assigned(FormNewUser) then begin
     FormNewUser.ButtonGoMainForm.Enabled:= true;
   end;    }
-    ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + ScreenName);  
+    StartDate:= Date;   // new code
+    ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + ScreenName);
   end;
 
   // Update UI only from main thread
@@ -963,15 +990,13 @@ procedure TForm1.UpdateUIAfterCalculateRiskForNewUser();
 begin
   SaveIniFile;
   SaveProfileIniFile;
-  ShowArrVolGroupForm(ArrVolGroup);
+  //ShowArrVolGroupForm(ArrVolGroup);
   SaveArrVolGroup(ArrVolGroup);
   SaveTableDayRisk(TableDayRisk);
   FormNewUser.Visible:= false;
 
   CurForm:= Form1;
-  LoadIniFile;
-  Form1.SetParameter;
-  Form1.GetMainParameter;
+  SetProfile;
   Form1.Visible:= true;
 end;
 
@@ -1402,23 +1427,33 @@ begin
 end;     // end inner function
 
 begin    // main function
+  Result:= false;
+  MessageOnQuitNewUser:= 'Setting up a new user is not complete. User ' +
+                          CurParameter.ScreenName +
+                         ' will be removed. Are you sure you want to quit?';
+
   MemoLinesAdd('');
   for i:= 0 to 22 do begin
     ArrVolGroup[i]:= 0;
   end;
   CurRisk:= GetRiskCapital(AStartCapital);
-  MemoLinesAdd(Format('For Capital = %.0f , Min Risk = %f ', [AStartCapital, CurRisk * 100]));
-  Result:= false;
+  MemoLinesAdd(Format('For ETF Capital = %.0f , Min Risk = %f ', [AStartCapital, CurRisk * 100]));
   if CurRisk < AMyBankr then Exit;
+
+          // Risk too big
   Result:= true;
-  if Windows.MessageBox(0, 'You Stocks Capital is too small. '
-                + 'Do you want calculate minimum needed capital?', 'biff', MB_YESNO+MB_SETFOREGROUND) = mrYes then begin
+  MessageOnQuitNewUser:= 'Due to insufficient ETF capital, Biff will not be able to work with the current parameters. User '
+                          + CurParameter.ScreenName +
+                         ' will be removed. You can recreate a new account at any time. Quit now?';
+
+  if Windows.MessageBox(0, 'Your ETF capital is too low. Do you want to calculate the minimum required ETF capital?',
+                        'biff', MB_YESNO+MB_SETFOREGROUND) = mrYes then begin
     Last:= ARasxod * ANumDay / 2;
     repeat
       if Terminating then Exit;
       Last:= Last * 2;
       CurRisk:= GetRiskCapital(Last);
-      MemoLinesAdd(Format('For Capital = %.0f , Min Risk = %f ', [Last, CurRisk * 100]));
+      MemoLinesAdd(Format('For ETF Capital = %.0f , Min Risk = %f ', [Last, CurRisk * 100]));
     until CurRisk < AMyBankr;
     First:= (Max(AStartCapital, Last / 2));
 
@@ -1427,7 +1462,7 @@ begin    // main function
 
       CurCapital:= (First + Last) / 2;
       CurRisk:= GetRiskCapital(CurCapital);
-      MemoLinesAdd(Format('For Capital = %.0f , Min Risk = %f ', [CurCapital, CurRisk * 100]));
+      MemoLinesAdd(Format('For ETF Capital = %.0f , Min Risk = %f ', [CurCapital, CurRisk * 100]));
       if CurRisk < AMyBankr then begin
         Last:= CurCapital;
       end else begin
@@ -1439,7 +1474,7 @@ begin    // main function
 
   end
   else begin
-    FormNewUser.ButtonAddUser.Enabled:= true;
+    //FormNewUser.ButtonAddUser.Enabled:= true;
   end;
 
 end;
@@ -1495,10 +1530,11 @@ begin
     TotalBankroll:= StocksCapital + GoldCapital;
     EditTotalBankroll.Text:= FloatToStr(TotalBankroll);
     EditMonthlyExpences.Text:= FloatToStr(MonthlyExpences);
-    AdvancedUser:= CheckBoxAdvanced.Checked;
-    FNumSim:= StrToIntDef(EditNumSim.Text, 25000);
-    IsBankruptcy:= CheckBoxBankruptcy.Checked;
-    UPROBankr:= StrToIntDef(EditUPROBankr.Text, 50000);
+
+    CheckBoxAdvanced.Checked:= AdvancedUser;
+    EditNumSim.Text:= IntToStr(FNumSim);
+    CheckBoxBankruptcy.Checked:= IsBankruptcy;
+    EditUPROBankr.Text:= IntToStr(UPROBankr);
 
     EditBusinessDaysLeft.Text:= IntToStr(BusinessDaysLeft);
     EditTodayDayLeft.Text:= IntToStr(TodayDayLeft);
@@ -1565,18 +1601,13 @@ begin
   
   // In case closing was already queried, don't ask permission.
   if (CurForm <> nil) and (not CalculationIsRuning) then begin
+    GetMainParameter;
     SaveLog;
     SaveIniFile;
   //  CurForm:= Self;
     SaveProfileIniFile;
     SaveArraySNP500;
   end;
-{
-  CurForm:= Self;
-  SaveLog;
-  SaveIniFile;
-  SaveProfileIniFile;
- }
   if not IsClosing then begin
     CanClose := false;
     IsClosing:= MessageDlg('Do you really want to close?', mtCustom, [mbYes, mbNo], 0) = mrYes;
@@ -1586,13 +1617,6 @@ begin
   if IsClosing then begin
     CanClose := true;
     Application.Terminate;
-  
-  {
-    if CalculationIsRuning then
-      CanClose := false // Don't allow to close in case calculation is running.
-    else
-      CanClose := IsClosing; // Otherwise relay on user's chiose.
-    }
   end;
 end;
 
@@ -1735,7 +1759,8 @@ end;
 procedure TForm1.PrepareGrid;
 var i: integer;
 begin
-  DateTimePicker2.Date:= Date;
+  //DateTimePicker2.Date:= Date;
+  SetLastDate;
   with StringGrid1 do begin
     ColWidths[0]:= 25;
     ColWidths[1]:= 75;
@@ -1872,10 +1897,24 @@ begin
 end;
 
 procedure TForm1.ButtonAddDayClick(Sender: TObject);
+var SNPClose: real;
 begin
+  SNPClose:= StrToFloatDef(EditSNP500.Text, 0);
+  if IsZero(SnpClose) or (SnpClose < 0) then begin
+    EditSNP500.Text:= '';
+    Exit;
+  end;  
   AddSNP500(DateTimePicker2.Date,  StrToFloat(EditSNP500.Text));
   ShowGridSNP500;
   SaveArraySNP500;
+  SetLastDate;
+end;
+
+procedure TForm1.SetLastDate;
+var LastDate: TDate;
+begin
+  LastDate:= ArraySNP500[High(ArraySNP500)].FDate + 1;
+  DateTimePicker2.Date:= LastDate;
 end;
 
 procedure TForm1.ButtonTodayUPROClick(Sender: TObject);
@@ -1888,13 +1927,7 @@ begin
                 , mtCustom, [mbYes, mbNo], 0) = mrYes then begin
 
       ShowTodayUPRO;
-  {  Index:= High(ArraySNP500);
-    if Index < 1 then Exit;
-    CurGroup:=  ArraySNP500[Index].VolGroup;
-    CurRerc:= ArrVolGroup[CurGroup - 1];
-    }
   end;
-
 end;
 
 procedure TForm1.ShowTodayUPRO;

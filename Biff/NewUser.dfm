@@ -1,8 +1,8 @@
 object FormNewUser: TFormNewUser
-  Left = 170
-  Top = 157
+  Left = 386
+  Top = 165
   Width = 729
-  Height = 640
+  Height = 607
   Caption = 'New User'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -120,7 +120,7 @@ object FormNewUser: TFormNewUser
     Height = 21
     Enabled = False
     TabOrder = 3
-    Text = '25000'
+    Text = '100000'
     OnKeyPress = NumericEditKeyPress
   end
   object EditTargetRisk: TEdit
@@ -175,7 +175,7 @@ object FormNewUser: TFormNewUser
     Left = 264
     Top = -3
     Width = 441
-    Height = 548
+    Height = 524
     ReadOnly = True
     ScrollBars = ssBoth
     TabOrder = 9
@@ -219,7 +219,7 @@ object FormNewUser: TFormNewUser
   end
   object ButtonCalcRisk: TButton
     Left = 32
-    Top = 520
+    Top = 496
     Width = 185
     Height = 25
     Caption = 'Calculate Daily Risks'
@@ -230,7 +230,7 @@ object FormNewUser: TFormNewUser
   end
   object ButtonGoMainForm: TButton
     Left = 32
-    Top = 552
+    Top = 504
     Width = 185
     Height = 25
     Caption = 'Go to Main Window'
@@ -250,7 +250,7 @@ object FormNewUser: TFormNewUser
   end
   object CheckBoxShowCalculating: TCheckBox
     Left = 408
-    Top = 552
+    Top = 528
     Width = 153
     Height = 17
     Caption = 'Show calculating process'
@@ -260,7 +260,7 @@ object FormNewUser: TFormNewUser
   end
   object StatusBar1: TStatusBar
     Left = 0
-    Top = 583
+    Top = 550
     Width = 713
     Height = 19
     Panels = <
@@ -274,7 +274,7 @@ object FormNewUser: TFormNewUser
   end
   object ButtonAddUser: TButton
     Left = 32
-    Top = 456
+    Top = 464
     Width = 185
     Height = 25
     Caption = 'Add New User'

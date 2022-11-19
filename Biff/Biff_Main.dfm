@@ -3,7 +3,7 @@ object Form1: TForm1
   Top = 155
   Width = 893
   Height = 686
-  Caption = 'Biff v.3.16'
+  Caption = 'Biff v.3.18'
   Color = clBtnFace
   DefaultMonitor = dmDesktop
   Font.Charset = DEFAULT_CHARSET
@@ -34,9 +34,9 @@ object Form1: TForm1
   object Label6: TLabel
     Left = 16
     Top = 80
-    Width = 81
+    Width = 78
     Height = 13
-    Caption = 'Today'#39' s Risk (%)'
+    Caption = 'Today'#39's Risk (%)'
   end
   object Label1: TLabel
     Left = 16
@@ -410,6 +410,7 @@ object Form1: TForm1
     Font.Name = 'MS Sans Serif'
     Font.Style = []
     ParentFont = False
+    ReadOnly = True
     TabOrder = 23
     Text = '0'
   end
@@ -424,6 +425,7 @@ object Form1: TForm1
     Font.Name = 'MS Sans Serif'
     Font.Style = [fsBold]
     ParentFont = False
+    ReadOnly = True
     TabOrder = 24
     Text = '0'
   end
