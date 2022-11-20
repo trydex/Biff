@@ -1961,12 +1961,14 @@ end;
 
 function TForm1.CheckAllEdits(): bool;
 begin
+  Result := false;
   if not CheckEmptyAndZero(EditTodayRisk, 'Today Risk') then Exit;
   if not CheckEmptyAndZero(EditStocks, 'Stocks') then Exit;
   if not CheckEmptyAndZero(EditGold, 'Gold', true) then Exit;
   if not CheckEmptyAndZero(EditMonthlyExpences, 'Monthly Expences') then Exit;
   if not CheckEmptyAndZero(EditNumSim, 'Number of Simulations') then Exit;
   if not CheckEmptyAndZero(EditUPROBankr, 'UPRO Daily Fail') then Exit;
+  Result := true;
 end;
 
 end.
