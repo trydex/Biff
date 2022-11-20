@@ -172,6 +172,8 @@ var
   procedure AddSNP500(ADate: TDate; AClose: real);
   procedure LoadArraySNP500;
   procedure SaveArraySNP500;
+  function CheckEmpty(edit: TEdit; name: string) : bool;
+  function CheckEmptyAndZero(edit: TEdit; name: string; alowZero: bool = false) : bool;
 
 
 implementation
@@ -836,5 +838,44 @@ begin
   CloseFile(F);
 end;
 
+function CheckEmpty(edit: TEdit; name: string) : bool;
+begin
+  if Length(edit.Text) = 0 then
+  begin
+    ShowMessage('Field ' + name + ' can not be empty!');
+    Result := false;
+    Exit;
+  end;
+
+  Result := true;
+end;
+
+function CheckEmptyAndZero(edit: TEdit; name: string; alowZero: bool = false) : bool;
+var defaultValue: real;
+begin
+  defaultValue := -1;
+
+  if not CheckEmpty(edit, name) then
+  begin
+    Result := false;
+    Exit;
+  end;
+
+  if StrToFloatDef(edit.Text, defaultValue) = defaultValue then
+  begin
+    ShowMessage('Field ' + name + ' should have a numeric value!');
+    Result := false;
+    Exit;
+  end;
+
+  if (IsZero(StrToFloatDef(edit.Text, defaultValue))) and (alowZero = false) then
+  begin
+    ShowMessage('Field ' + name + ' should be greater then zero!');
+    Result := false;
+    Exit;
+  end;
+
+  Result := true;
+end;
 
 end.

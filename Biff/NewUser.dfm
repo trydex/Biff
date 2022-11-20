@@ -1,9 +1,12 @@
 object FormNewUser: TFormNewUser
-  Left = 386
-  Top = 165
-  Width = 729
-  Height = 607
+  Left = 202
+  Top = 129
+  VertScrollBar.Visible = False
+  BorderIcons = [biSystemMenu, biMinimize]
+  BorderStyle = bsSingle
   Caption = 'New User'
+  ClientHeight = 568
+  ClientWidth = 713
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -11,6 +14,7 @@ object FormNewUser: TFormNewUser
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   OldCreateOrder = False
+  Position = poScreenCenter
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -260,7 +264,7 @@ object FormNewUser: TFormNewUser
   end
   object StatusBar1: TStatusBar
     Left = 0
-    Top = 550
+    Top = 549
     Width = 713
     Height = 19
     Panels = <
