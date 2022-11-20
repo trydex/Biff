@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, Math, INIFiles, ComCtrls, ExtCtrls, UnitDialog, Utils, StrUtils,
+  Dialogs, StdCtrls, Math, INIFiles, ComCtrls, ExtCtrls, UnitDialog, Utils, StrUtils, Credits,
   profile, variables, Login, NewUser, Grids;
 
 type
@@ -52,6 +52,7 @@ type
     Label12: TLabel;
     EditTodayUPRO: TEdit;
     ButtonTodayUPRO: TButton;
+    BtnCredits: TButton;
     procedure FormCreate(Sender: TObject);
     procedure ButtonClearMemoClick(Sender: TObject);
   //  procedure ButtonUPROClick(Sender: TObject);
@@ -77,6 +78,7 @@ type
     procedure StringGrid1KeyPress(Sender: TObject; var Key: Char);
     procedure ButtonAddDayClick(Sender: TObject);
     procedure ButtonTodayUPROClick(Sender: TObject);
+    procedure BtnCreditsClick(Sender: TObject);
 
   private
     { Private declarations }
@@ -152,6 +154,7 @@ type
     procedure ShowGridSNP500;
     procedure ShowTodayUPRO;
     procedure SetLastDate;
+    function CheckAllEdits(): bool;
  end;
 
 var
@@ -882,6 +885,8 @@ end;
 
 procedure TForm1.ButtonBestRatioClick(Sender: TObject);
 begin
+  if not CheckAllEdits then Exit;  
+
   CalculationIsRuning := true;
  // ProgressBar.Position := 0;
   if GetMainParameter then begin;
@@ -941,7 +946,7 @@ procedure TForm1.CalculateRiskForNewUser();
 begin
   with CurParameter, FormNewUser do begin
     Memo1.Lines.Add('');
-    Memo1.Lines.Add('Calculate min risk for your parameter ...');
+    Memo1.Lines.Add('Calculate min risk for your parameters ...');
 
     if CalculateRisk(StocksCapital, DailyExpences, TodayRisk, TodayDayLeft, FNumSim ) then begin
       Memo1.Lines.Add('');
@@ -1665,6 +1670,8 @@ end;
 
 procedure TForm1.ButtonCalculateRiskClick(Sender: TObject);
 begin
+  if not CheckAllEdits then Exit;
+
   CalculationIsRuning := true;
 //  with Form1, CurParameter do begin
   if MessageDlg('You should recalculate daily risks only if at least one of your parameters is changed a lot. '
@@ -1751,6 +1758,8 @@ end;
 
 procedure TForm1.ButtonCalculateEVClick(Sender: TObject);
 begin
+  if not CheckAllEdits then Exit;
+  
   CalculationIsRuning := true;
   GetMainParameter;
   TCaclulationThread.Create(CaseCalcEv);
@@ -1899,12 +1908,11 @@ end;
 procedure TForm1.ButtonAddDayClick(Sender: TObject);
 var SNPClose: real;
 begin
-  SNPClose:= StrToFloatDef(EditSNP500.Text, 0);
-  if IsZero(SnpClose) or (SnpClose < 0) then begin
-    EditSNP500.Text:= '';
-    Exit;
-  end;  
-  AddSNP500(DateTimePicker2.Date,  StrToFloat(EditSNP500.Text));
+  if not CheckEmptyAndZero(EditSNP500, 'SnP500') then Exit;
+
+  SNPClose:= StrToFloat(EditSNP500.Text);
+
+  AddSNP500(DateTimePicker2.Date, StrToFloat(EditSNP500.Text));
   ShowGridSNP500;
   SaveArraySNP500;
   SetLastDate;
@@ -1915,6 +1923,7 @@ var LastDate: TDate;
 begin
   LastDate:= ArraySNP500[High(ArraySNP500)].FDate + 1;
   DateTimePicker2.Date:= LastDate;
+  DateTimePicker1.MinDate:= LastDate;
 end;
 
 procedure TForm1.ButtonTodayUPROClick(Sender: TObject);
@@ -1944,5 +1953,20 @@ begin
     ArraySNP500[Index].UPROPer:= CurPerc;
 end;
 
+
+procedure TForm1.BtnCreditsClick(Sender: TObject);
+begin
+  FormCredits.ShowModal;
+end;
+
+function TForm1.CheckAllEdits(): bool;
+begin
+  if not CheckEmptyAndZero(EditTodayRisk, 'Today Risk') then Exit;
+  if not CheckEmptyAndZero(EditStocks, 'Stocks') then Exit;
+  if not CheckEmptyAndZero(EditGold, 'Gold', true) then Exit;
+  if not CheckEmptyAndZero(EditMonthlyExpences, 'Monthly Expences') then Exit;
+  if not CheckEmptyAndZero(EditNumSim, 'Number of Simulations') then Exit;
+  if not CheckEmptyAndZero(EditUPROBankr, 'UPRO Daily Fail') then Exit;
+end;
 
 end.

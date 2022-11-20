@@ -1,9 +1,12 @@
 object Form1: TForm1
-  Left = 929
-  Top = 155
-  Width = 893
-  Height = 686
-  Caption = 'Biff v.3.18'
+  Left = 925
+  Top = 129
+  VertScrollBar.Visible = False
+  BorderIcons = [biSystemMenu, biMinimize]
+  BorderStyle = bsSingle
+  Caption = 'Biff v.3.19'
+  ClientHeight = 638
+  ClientWidth = 874
   Color = clBtnFace
   DefaultMonitor = dmDesktop
   Font.Charset = DEFAULT_CHARSET
@@ -12,6 +15,7 @@ object Form1: TForm1
   Font.Name = 'MS Sans Serif'
   Font.Style = []
   OldCreateOrder = False
+  Position = poScreenCenter
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
@@ -124,7 +128,7 @@ object Form1: TForm1
     OnKeyPress = Memo1KeyPress
   end
   object ButtonClearMemo: TButton
-    Left = 792
+    Left = 768
     Top = 592
     Width = 73
     Height = 25
@@ -143,8 +147,8 @@ object Form1: TForm1
   end
   object StatusBar1: TStatusBar
     Left = 0
-    Top = 629
-    Width = 877
+    Top = 619
+    Width = 874
     Height = 19
     Panels = <
       item
@@ -437,6 +441,15 @@ object Form1: TForm1
     Caption = 'Show Today'#39's UPRO Ratio'
     TabOrder = 25
     OnClick = ButtonTodayUPROClick
+  end
+  object BtnCredits: TButton
+    Left = 848
+    Top = 592
+    Width = 25
+    Height = 25
+    Caption = '?'
+    TabOrder = 26
+    OnClick = BtnCreditsClick
   end
   object Timer1: TTimer
     OnTimer = Timer1Timer

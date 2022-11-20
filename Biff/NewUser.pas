@@ -132,6 +132,15 @@ end;
 procedure TFormNewUser.ButtonAddUserClick(Sender: TObject);
 var i: integer;
 begin
+  if not CheckEmpty(EditScreenName, 'Screen Name') then Exit;
+  if not CheckEmptyAndZero(EditTargetRisk, 'Target Risk') then Exit;
+  if not CheckEmptyAndZero(EditTargetRisk, 'Target Risk') then Exit;
+  if not CheckEmptyAndZero(EditStocks, 'Stocks') then Exit;
+  if not CheckEmptyAndZero(EditGold, 'Gold', true) then Exit;
+  if not CheckEmptyAndZero(EditMonthlyExpences, 'Monthly Expences') then Exit;
+  if not CheckEmptyAndZero(EditNumSim, 'Number of Simulations') then Exit;
+  if not CheckEmptyAndZero(EditUPROBankr, 'UPRO Daily Fail') then Exit;
+
   MessageOnQuitNewUser:= 'Do you really want to close?'; 
   for i:= 0 to AllProfiles.Count - 1 do begin
     if Allprofiles[i] = EditScreenName.Text then begin
@@ -152,6 +161,10 @@ begin
   EditStocks.Enabled:= false;
   EditGold.Enabled:= false;
   EditMonthlyExpences.Enabled:= false;
+  CheckBoxAdvanced.Enabled:= false;
+  EditNumSim.Enabled:= false;
+  EditUPROBankr.Enabled:= false;
+  CheckBoxBankruptcy.Enabled:= false;
 
   CalculationIsRuning := true;
   TCaclulationThread.Create(CaseDailyRisk);
