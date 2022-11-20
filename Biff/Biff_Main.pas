@@ -57,7 +57,6 @@ type
     procedure ButtonClearMemoClick(Sender: TObject);
   //  procedure ButtonUPROClick(Sender: TObject);
     procedure ButtonBestRatioClick(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
     procedure EnableControls(enable: bool);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure Memo1KeyPress(Sender: TObject; var Key: Char);
@@ -119,7 +118,6 @@ type
     function GetMainParameter: boolean;
     procedure SetParameter;
     procedure SetLogFileName;
-    procedure SaveLog;
     procedure CalculateDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
     procedure CreateTableDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
     procedure FindBestRatioThreadSwitcher(ThreadCase: TCalculationCase);
@@ -271,18 +269,6 @@ procedure TForm1.SetLogFileName;
 begin
   LogFileName:= Version + '_'+  FormatDateTime('yyyy-mm-dd-hh-nn-ss', Now) + '.txt';
 end;
-
-procedure TForm1.SaveLog;
-begin
-  //Memo1.Lines.SaveToFile(LogFileName);
-end;
-
-
-procedure TForm1.FormDestroy(Sender: TObject);
-begin
-//  SaveLog;
-end;
-
 
 procedure TForm1.ButtonClearMemoClick(Sender: TObject);
 begin
@@ -929,7 +915,6 @@ begin
       ShowArrVolGroupForm(ArrVolGroup);
       SaveArrVolGroup(ArrVolGroup);
     end;
- //  SaveLog;
  // EditUPROPer.Text:= FloatToStr(BestRatio * 100 / MaxI);
 end;
 
@@ -1485,9 +1470,22 @@ begin    // main function
 end;
 
 function TForm1.GetMainParameter: boolean;
+var defaultValue: real;
+    isValid: bool;
 begin
+  Result:= false;
+  defaultValue := -1;
+  isValid := true;
+
+  // Check that all user inputs have valid values
+  isValid := isValid and not (StrToFloatDef(EditStocks.Text, defaultValue) = defaultValue);
+  isValid := isValid and not (StrToFloatDef(EditGold.Text, defaultValue) = defaultValue);
+  isValid := isValid and not (StrToFloatDef(EditMonthlyExpences.Text, defaultValue) = defaultValue);
+  isValid := isValid and not (StrToFloatDef(EditNumSim.Text, defaultValue) = defaultValue);
+  isValid := isValid and not (StrToFloatDef(EditUPROBankr.Text, defaultValue) = defaultValue);
+  if not isValid then Exit;
+
   with CurParameter do begin
-    Result:= false;
     StocksCapital:= StrToFloatDef(EditStocks.Text, 0);
     GoldCapital:= StrToFloatDef(EditGold.Text, 0);
     TotalBankroll:= StocksCapital + GoldCapital;
@@ -1528,7 +1526,9 @@ begin
   with CurParameter do begin
     CalculateDayLeft(DateTimePicker1.Date);
     EditScreenName.Text:= ScreenName;
-    DateTimePicker1.Date:= Date;
+    DateTimePicker1.MinDate := StartDate;
+    DateTimePicker1.MaxDate := DateOfBirth + Round(85 * 365.25);
+    DateTimePicker1.Date:= Now;
     EditTodayRisk.Text:= FloatToStr(TodayRisk * 100);
     EditStocks.Text:= FloatToStr(StocksCapital);
     EditGold.Text:= FloatToStr(GoldCapital);
@@ -1606,11 +1606,9 @@ begin
   
   // In case closing was already queried, don't ask permission.
   if (CurForm <> nil) and (not CalculationIsRuning) then begin
-    GetMainParameter;
-    SaveLog;
+    if GetMainParameter then
+      SaveProfileIniFile;
     SaveIniFile;
-  //  CurForm:= Self;
-    SaveProfileIniFile;
     SaveArraySNP500;
   end;
   if not IsClosing then begin
@@ -1923,7 +1921,6 @@ var LastDate: TDate;
 begin
   LastDate:= ArraySNP500[High(ArraySNP500)].FDate + 1;
   DateTimePicker2.Date:= LastDate;
-  DateTimePicker1.MinDate:= LastDate;
 end;
 
 procedure TForm1.ButtonTodayUPROClick(Sender: TObject);
