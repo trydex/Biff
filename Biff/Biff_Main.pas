@@ -1528,7 +1528,7 @@ begin
     EditScreenName.Text:= ScreenName;
     DateTimePicker1.MinDate := StartDate;
     DateTimePicker1.MaxDate := DateOfBirth + Round(85 * 365.25);
-    DateTimePicker1.Date:= Now;
+    DateTimePicker1.Date:= Date;
     EditTodayRisk.Text:= FloatToStr(TodayRisk * 100);
     EditStocks.Text:= FloatToStr(StocksCapital);
     EditGold.Text:= FloatToStr(GoldCapital);
