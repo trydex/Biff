@@ -411,7 +411,7 @@ begin
       SumaVol:= SumaVol + ArrPriceData[i].Vol;
       ArrPriceData[i].NumGroup:= FindNumGroup(SumaVol / i);
     end;
-   if FirstDay > 12 then begin
+   if ANumDay > 12 then begin
     if NumVolGroup >=0 then begin
       NumGroup:= NumVolGroup; //FindNumGroup(SumaVol / 12);
       N:= Length(PriceData2Dim[NumGroup]);
