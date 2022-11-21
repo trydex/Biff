@@ -374,11 +374,13 @@ end;
 // Creates an array with random prices, based on previous 12 days volatility.
 // Seed for randomized, used by this function should always be passed from outside as a pointer. 
 // This seed is modified by this function, and later is re-used again and again -this helps to keep a steady random distribution.
+
 function TForm1.CreatePriceDataArray(ANumDay: integer; FirstSeed: PCardinal): TArrPriceData;
 var i, N,  NumGroup, Index: integer;
     SumaVol: real;
     RandSeed: Cardinal;
     ArrPriceData: TArrPriceData;
+    FirstDay: integer;
 
   // Use inline custom randomization to prevent seed synchronization between threads, as this takes too much processor time.
   function MyRandInt(Range: integer) : integer;
@@ -399,13 +401,17 @@ begin
   N:= Length(PriceData);
   begin                                   // 12-Day Volatility
     SumaVol:= 0;
-    for i:= 1 to 12 do begin
+    if ANumDay < 12 then
+      FirstDay:= ANumDay
+    else
+      FirstDay:= 12;
+    for i:= 1 to FirstDay do begin
       Index:= MyRandInt(N);
       ArrPriceData[i]:= PriceData[Index];
       SumaVol:= SumaVol + ArrPriceData[i].Vol;
       ArrPriceData[i].NumGroup:= FindNumGroup(SumaVol / i);
     end;
-
+   if FirstDay > 12 then begin
     if NumVolGroup >=0 then begin
       NumGroup:= NumVolGroup; //FindNumGroup(SumaVol / 12);
       N:= Length(PriceData2Dim[NumGroup]);
@@ -415,7 +421,7 @@ begin
         //SumaVol:= SumaVol - ArrPriceData[i - 12].Vol + ArrPriceData[i].Vol;  // nor need find NumGroup
         ArrPriceData[i].NumGroup:= NumGroup;
       end;
-    end 
+    end
     else begin
       for i:= 13 to ANumDay do begin
         NumGroup:= FindNumGroup(SumaVol / 12);
@@ -424,7 +430,8 @@ begin
         SumaVol:= SumaVol - ArrPriceData[i - 12].Vol + ArrPriceData[i].Vol;
         ArrPriceData[i].NumGroup:= NumGroup;
       end;
-    end; 
+    end;
+   end; 
   end;
 
   FirstSeed^ := RandSeed; // update the initial seed with the last value
