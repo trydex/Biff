@@ -60,9 +60,6 @@ type
     NumVolGroup: integer;     // temporally
     ArrVolGroup: TArrVolGroup;  //array[0..22] of real;
     OrigArrVolGroup: TArrVolGroup;
-    ArrProbDeath: array of real;
-    IsClosing: bool;
-
   end;
 
 var

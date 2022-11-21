@@ -48,7 +48,7 @@ type
   PTable = ^TTable;
   PCardinal = ^Cardinal;
 
-  TCaclBankruptcyAlgo = (AlgoSimple, AlgoAdvanced, AlgoExtra);
+  TCaclBankruptcyAlgo = (AlgoSimple); // extend if needed
 
   TCalculationCase = (CaseFindBestRatio, CaseDailyRisk, CaseDailyRiskMain, CaseCalcEv);
 
@@ -144,9 +144,9 @@ var
   ArraySNP500: array of TSNP500;
   CurCell: TCurCell;
 
-  IsClosing: bool;
-  Terminating: bool;
-  CalculationIsRuning: bool;
+  IsClosing: bool; // User requested a to close a program.
+  Terminating: bool; // Application is irreversibly closing.
+  CalculationIsRuning: bool; // Any long calculation is in progress.
 
   MessageOnQuitNewUser: string;
   
@@ -231,12 +231,7 @@ procedure TCaclBankruptcyThread.Execute;
 begin
   if Terminating then Exit;
   if CaclBankruptcyAlgo = AlgoSimple then
-    Form1.CalcNumBankruptcySimpleInternal(FirstSeed, ANumSim, ANumDay, ACapital, ARasxod, StartRatio)
-  else if CaclBankruptcyAlgo = AlgoAdvanced then
-    //Form1.CalcNumBankruptcyAdvInternal(FirstSeed, ANumSim, ANumDay, AStepDay, ACapital, ARasxod, StartRatio)
-  else if CaclBankruptcyAlgo = AlgoExtra then
-    //Form1.CalcNumBankruptcyExtraInternal(FirstSeed, ANumSim, ANumDay, ACurDay, AStepDay, ACapital, ARasxod, StartRatio);
-    ;
+    Form1.CalcNumBankruptcySimpleInternal(FirstSeed, ANumSim, ANumDay, ACapital, ARasxod, StartRatio);
 end;
 
 destructor TCaclBankruptcyThread.Destroy;
@@ -280,7 +275,6 @@ procedure LoadIniFile;
 var
   AIniFile: INIFiles.TIniFile;
   AFileName: string;
-  i: integer;
 begin
   AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
   AIniFile:= IniFiles.TIniFile.Create(AFileName);
@@ -312,7 +306,6 @@ procedure SaveIniFile;
 var
   AIniFile: INIFiles.TIniFile;
   AFileName: string;
-  i: integer;
 begin
   if Terminating and CalculationIsRuning then Exit;
   AFileName:= ExtractFilePath(GetModuleName(0)) + 'startup.ini';
@@ -344,7 +337,6 @@ procedure LoadProfileIniFile;
 var
   AIniFile: INIFiles.TIniFile;
   AFileName: string;
-  i: integer;
 begin
   AFileName:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\profile.ini';
   AIniFile:= IniFiles.TIniFile.Create(AFileName);
@@ -377,7 +369,6 @@ procedure SaveProfileIniFile;
 var
   AIniFile: INIFiles.TIniFile;
   AFileName: string;
-  i: integer;
 begin
   if Terminating and CalculationIsRuning then Exit;
   if CurProfile = '' then Exit;
@@ -488,10 +479,11 @@ function GetLatestFileName(ADir: string): string;
 var
   SR: TSearchRec;
   FindRes: integer;
-  AFileMask, FileStr, FileRootStr: string;
+  AFileMask, FileRootStr: string;
   CurTime, MaxTime: TDateTime;
 begin
   Result:= '';
+  MaxTime:= -1;
     try
       AFileMask:='*.txt';
       //FileRootStr:= ExtractFilePath(GetModuleName(0)) + '\Profiles\' + CurProfile + '\Archive Ratio\';
@@ -514,8 +506,6 @@ procedure LoadArrVolGroup(var AArrVolGroup: TArrVolGroup);
 var
   F: TextFile;
   S, FileNameStr: string;
-  CurDate: TDate;
-  CurClose: real;
   i: integer;
 
   function GetStr(SubStr, Str: string): string;
@@ -596,9 +586,9 @@ end;
 procedure GetAllProfiles;
 var
   SR: TSearchRec;
-  i, FindRes: integer;
+  FindRes: integer;
   //SL: TStringList;
-  AFileMask, FileStr, FileRootStr: string;
+  AFileMask, FileRootStr: string;
 begin
   AllProfiles:= TStringList.Create;
   try
@@ -621,7 +611,7 @@ begin
 end;
 
 procedure CalculateDayLeft(ATodayDate: TDate);
-var TodayDate: TDate;
+//var TodayDate: TDate;
 begin
   //TodayDate:= Form1.DateTimePicker1.Date;
   with CurParameter do begin
@@ -692,20 +682,20 @@ begin
 end;
 
 
-  function FindNumGroup(ToFind: real): integer;
-  var
-    N, First, Last, Mid: integer;
-  begin
-    First:= 0;  Last:= 22;
-    while First < Last do begin
-      Mid:= (First + Last) div 2;
-      if GroupVol[Mid] < ToFind then
-        First:= Mid + 1
-      else
-        Last:= Mid ;
-    end;
-    Result:= First;  // or Last
+function FindNumGroup(ToFind: real): integer;
+var
+  First, Last, Mid: integer;
+begin
+  First:= 0;  Last:= 22;
+  while First < Last do begin
+    Mid:= (First + Last) div 2;
+    if GroupVol[Mid] < ToFind then
+      First:= Mid + 1
+    else
+      Last:= Mid ;
   end;
+  Result:= First;  // or Last
+end;
 
 
 procedure AddSNP500(ADate: TDate; AClose: real);
@@ -782,9 +772,8 @@ end;
 procedure SaveArraySNP500;
 var
   F: TextFile;
-  S, FileNameStr, ArchiveNameStr: string;
+  S, FileNameStr: string;
   i: integer;
-  CurDate, DeathDate: TDate;
 begin
   if Terminating and CalculationIsRuning then Exit;
   //FileNameStr:= ExtractFilePath(ParamStr(0)) + '\Profiles\' + CurProfile + '\TableDayRisk.txt';

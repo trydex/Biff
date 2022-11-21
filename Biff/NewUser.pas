@@ -148,7 +148,7 @@ begin
   end;
 
   CurForm:= Self;
-//  ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + EditScreenName.Text);
+  //ForceDirectories(ExtractFilePath(GetModuleName(0)) + '\Profiles\' + EditScreenName.Text);
 
   if not GetNewUserParameter then Exit;
 
@@ -214,7 +214,7 @@ procedure TFormNewUser.FormCloseQuery(Sender: TObject;
   var CanClose: Boolean);
 begin
   CanClose := false;
-//  IsClosing:= MessageDlg('Do you really want to close?', mtCustom, [mbYes, mbNo], 0) = mrYes;
+  //IsClosing:= MessageDlg('Do you really want to close?', mtCustom, [mbYes, mbNo], 0) = mrYes;
   IsClosing:= MessageDlg(MessageOnQuitNewUser, mtCustom, [mbYes, mbNo], 0) = mrYes;
 
   if (not IsClosing) then
