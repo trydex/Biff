@@ -45,7 +45,6 @@ type
     procedure ButtonCalcRiskClick(Sender: TObject);
     procedure ButtonGoMainFormClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
-    procedure FormDestroy(Sender: TObject);
     procedure NumericEditKeyPress(Sender: TObject; var Key: Char);
     procedure FloatEditKeyPress(Sender: TObject; var Key: Char);
     procedure ButtonAddUserClick(Sender: TObject);
@@ -53,7 +52,6 @@ type
     { Private declarations }
   public
     { Public declarations }
-    //procedure GetParameter;
     function GetNewUserParameter: boolean;
   end;
 
@@ -235,11 +233,6 @@ begin
   end;
 end;
 
-procedure TFormNewUser.FormDestroy(Sender: TObject);
-begin
-//  SaveIniFile;
-//  SaveProfileIniFile;
-end;
 
 procedure TFormNewUser.NumericEditKeyPress(Sender: TObject; var Key: Char);
 begin

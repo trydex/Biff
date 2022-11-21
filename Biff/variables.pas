@@ -150,7 +150,6 @@ var
 
   MessageOnQuitNewUser: string;
   
- // procedure FindBestRatioProcedure();
   procedure LoadIniFile;
   procedure SaveIniFile;
   procedure LoadProfileIniFile;
@@ -167,7 +166,6 @@ var
   procedure CalculateDayLeft(ATodayDate: TDate);
   function SetProfileTableName: string;
   function SmoothingArrVolGroup(AArrVolGroup: TArrVolGroup): TArrVolGroup;
-  procedure EnableControls(enable: bool);
   function FindNumGroup(ToFind: real): integer;
   procedure AddSNP500(ADate: TDate; AClose: real);
   procedure LoadArraySNP500;
@@ -290,19 +288,14 @@ begin
     //if Assigned(Form1) then
     if CurForm is TForm1 then begin
       with TForm1(CurForm) do begin
-
- //   with Form1 do begin
         Left:= AIniFile.ReadInteger('Common', 'Left', Left);
         Top:= AIniFile.ReadInteger('Common', 'Top', Top);
         Width:= AIniFile.ReadInteger('Common', 'Width', Width);
         Height:= AIniFile.ReadInteger('Common', 'Height', Height);
       end;
     end;
- //   if Assigned(FormNewUser) then
     if CurForm is TFormNewUser then begin
       with TFormNewUser(CurForm) do begin
-
-//    with FormNewUser do begin
         Left:= AIniFile.ReadInteger('NewUser', 'Left', Left);
         Top:= AIniFile.ReadInteger('NewUser', 'Top', Top);
         Width:= AIniFile.ReadInteger('NewUser', 'Width', Width);
@@ -698,29 +691,6 @@ begin
   end;
 end;
 
-procedure EnableControls(enable: bool);
-begin
-//  if Terminating then
-//    Exit;
-
-{
-  if Assigned(CurForm) then begin
-
-    if CurForm is TFormNewUser then begin
-      with TFormNewUser(CurForm) do begin
-        //
-      end;
-    end else if CurForm is TForm1 then begin
-      with TForm1(CurForm) do begin
-        ButtonRefreshParameter.Enabled:= enable;
-        ButtonCalculateRisk .Enabled:= enable;
-        ButtonBestRatio.Enabled:= enable;
-        ButtonClearMemo.Enabled:= enable;
-      end;
-    end;
-  end;
-  }
-end;
 
   function FindNumGroup(ToFind: real): integer;
   var
@@ -802,7 +772,7 @@ begin
   while not EOF(F) do begin
     readln(F, S);
     CurDate:= Utils.StrToDateDefEx(GetStr('Date=', S), Date);
-    CurClose:= StrToFloat(GetStr('Close=', S));
+    CurClose:= StrToFloatDef(GetStr('Close=', S), 1);
     AddSNP500(CurDate, CurClose);
   end;
   CloseFile(F);
@@ -829,9 +799,6 @@ begin
       S:= S + Format(' Volat=%.6f;', [Vol]);
       S:= S + Format(' 12VolAv=%.6f;', [Vol12Average]);
       S:= S + Format(' Group=%d;', [VolGroup + 1]);
-      //if not IsZero(UPROPer) then begin
-      //  S:= S + Format(' UPRO=%f;', [UPROPer * 100]);
-      //end;
       writeln(F, S);
     end;
   end;

@@ -17,7 +17,6 @@ object FormNewUser: TFormNewUser
   Position = poScreenCenter
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
-  OnDestroy = FormDestroy
   PixelsPerInch = 96
   TextHeight = 13
   object Label1: TLabel
