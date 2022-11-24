@@ -171,8 +171,9 @@ var
   procedure LoadArraySNP500;
   procedure SaveArraySNP500;
   function CheckEmpty(edit: TEdit; name: string) : bool;
-  function CheckEmptyAndZero(edit: TEdit; name: string; alowZero: bool = false) : bool;
-
+  function CheckEmptyAndLimit(edit: TEdit; name: string; limit: integer = 0) : bool;
+  procedure qSort(var A: TArrayReal; min, max: Integer);
+  
 
 implementation
 
@@ -806,10 +807,10 @@ begin
   Result := true;
 end;
 
-function CheckEmptyAndZero(edit: TEdit; name: string; alowZero: bool = false) : bool;
+function CheckEmptyAndLimit(edit: TEdit; name: string; limit: integer = 0) : bool;
 var defaultValue: real;
 begin
-  defaultValue := -1;
+  defaultValue := Low(Integer);
 
   if not CheckEmpty(edit, name) then
   begin
@@ -824,14 +825,35 @@ begin
     Exit;
   end;
 
-  if (IsZero(StrToFloatDef(edit.Text, defaultValue))) and (alowZero = false) then
+  if StrToInt(edit.Text) <= limit then
   begin
-    ShowMessage('Field ' + name + ' should be greater then zero!');
+    ShowMessage('Field ' + name + ' should be greater then ' + FloatToStr(limit) + '!');
     Result := false;
     Exit;
   end;
 
   Result := true;
+end;
+
+procedure qSort(var A: TArrayReal; min, max: Integer);
+var
+  i, j: integer;
+  supp, tmp: real;
+begin
+  supp:=A[max-((max-min) div 2)];
+  i:=min; j:=max;
+  while i<j do
+    begin
+      while A[i]<supp do i:=i+1;
+      while A[j]>supp do j:=j-1;
+      if i<=j then
+        begin
+          tmp:=A[i]; A[i]:=A[j]; A[j]:=tmp;
+          i:=i+1; j:=j-1;
+        end;
+    end;
+  if min<j then qSort(A, min, j);
+  if i<max then qSort(A, i, max);
 end;
 
 end.

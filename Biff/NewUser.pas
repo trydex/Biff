@@ -131,13 +131,13 @@ procedure TFormNewUser.ButtonAddUserClick(Sender: TObject);
 var i: integer;
 begin
   if not CheckEmpty(EditScreenName, 'Screen Name') then Exit;
-  if not CheckEmptyAndZero(EditTargetRisk, 'Target Risk') then Exit;
-  if not CheckEmptyAndZero(EditTargetRisk, 'Target Risk') then Exit;
-  if not CheckEmptyAndZero(EditStocks, 'Stocks') then Exit;
-  if not CheckEmptyAndZero(EditGold, 'Gold', true) then Exit;
-  if not CheckEmptyAndZero(EditMonthlyExpences, 'Monthly Expences') then Exit;
-  if not CheckEmptyAndZero(EditNumSim, 'Number of Simulations') then Exit;
-  if not CheckEmptyAndZero(EditUPROBankr, 'UPRO Daily Fail') then Exit;
+  if not CheckEmptyAndLimit(EditTargetRisk, 'Target Risk') then Exit;
+  if not CheckEmptyAndLimit(EditTargetRisk, 'Target Risk') then Exit;
+  if not CheckEmptyAndLimit(EditStocks, 'Stocks') then Exit;
+  if not CheckEmptyAndLimit(EditGold, 'Gold', -1) then Exit;
+  if not CheckEmptyAndLimit(EditMonthlyExpences, 'Monthly Expences') then Exit;
+  if not CheckEmptyAndLimit(EditNumSim, 'Number of Simulations') then Exit;
+  if not CheckEmptyAndLimit(EditUPROBankr, 'UPRO Daily Fail') then Exit;
 
   MessageOnQuitNewUser:= 'Do you really want to close?'; 
   for i:= 0 to AllProfiles.Count - 1 do begin

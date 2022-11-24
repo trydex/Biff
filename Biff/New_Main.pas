@@ -56,7 +56,7 @@ type
     IsInflation: boolean;
     RatioArray: TRatioArray;
     ZeroRatioArray: TRatioArray;
-    LogFileName: string;
+    //LogFileName: string;
     NumVolGroup: integer;     // temporally
     ArrVolGroup: TArrVolGroup;  //array[0..22] of real;
     OrigArrVolGroup: TArrVolGroup;

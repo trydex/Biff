@@ -4,7 +4,7 @@ object Form1: TForm1
   VertScrollBar.Visible = False
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
-  Caption = 'Biff v.3.20'
+  Caption = 'Biff v.4.0'
   ClientHeight = 638
   ClientWidth = 874
   Color = clBtnFace

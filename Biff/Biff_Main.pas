@@ -66,12 +66,9 @@ type
     procedure CheckBoxAdvancedClick(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
     procedure ButtonCalculateEVClick(Sender: TObject);
-    procedure StringGrid1SelectCell(Sender: TObject; ACol, ARow: Integer;
-      var CanSelect: Boolean);
-    procedure StringGrid1SetEditText(Sender: TObject; ACol, ARow: Integer;
-      const Value: String);
-    procedure StringGrid1GetEditText(Sender: TObject; ACol, ARow: Integer;
-      var Value: String);
+    procedure StringGrid1SelectCell(Sender: TObject; ACol, ARow: Integer; var CanSelect: Boolean);
+    procedure StringGrid1SetEditText(Sender: TObject; ACol, ARow: Integer; const Value: String);
+    procedure StringGrid1GetEditText(Sender: TObject; ACol, ARow: Integer; var Value: String);
     procedure StringGrid1Exit(Sender: TObject);
     procedure StringGrid1KeyPress(Sender: TObject; var Key: Char);
     procedure ButtonAddDayClick(Sender: TObject);
@@ -97,7 +94,7 @@ type
     IsInflation: boolean;   // allways true
     RatioArray: TRatioArray;
     ZeroRatioArray: TRatioArray;
-    LogFileName: string;
+    //LogFileName: string;
     
     NumVolGroup: integer;     // temporally
     ArrVolGroup: TArrVolGroup;  //array[0..22] of real;
@@ -108,11 +105,10 @@ type
     procedure WMUpdatePB(var msg: TMessage); message WM_UPDATE_PB;
     procedure OpenPriceFile;
     procedure OpenPriceFileByName(var APriceData: TArrPriceData; AFileName: string);
-    function GetDirectoryName(NumGroup: integer): string;
     procedure CreateProbDeathArr;
     function GetMainParameter: boolean;
     procedure SetParameter;
-    procedure SetLogFileName;
+    //procedure SetLogFileName;
     procedure CalculateDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
     procedure CreateTableDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
     procedure FindBestRatioThreadSwitcher(ThreadCase: TCalculationCase);
@@ -127,7 +123,6 @@ type
 
     procedure CalcNumBankruptcySimple(ANumSim,  ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
     procedure CalcNumBankruptcySimpleInternal(FirstSeed: Cardinal; ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
-    procedure qSort(var A: TArrayReal; min, max: Integer);
     procedure CalculateRiskEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
     procedure CalculateRiskEVInternal(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSimStart, ANumSimEnd: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
     procedure CalculateEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
@@ -220,7 +215,7 @@ begin
       FRatio:= 0;
     end;
   end;
-  SetLogFileName;
+  //SetLogFileName;
   if CanShow then
     Self.Visible:= true;
 end;
@@ -245,10 +240,12 @@ begin
 
 end;
 
+{
 procedure TForm1.SetLogFileName;
 begin
   LogFileName:= Version + '_'+  FormatDateTime('yyyy-mm-dd-hh-nn-ss', Now) + '.txt';
 end;
+}
 
 procedure TForm1.ButtonClearMemoClick(Sender: TObject);
 begin
@@ -261,43 +258,9 @@ begin
   OpenPriceFileByName(PriceData, '');
   SetLength(PriceData2Dim, 23);
   for i:= 0 to High(PriceData2Dim) do begin
-    OpenPriceFileByName(PriceData2Dim[i], GetDirectoryName(i + 1));
+    OpenPriceFileByName(PriceData2Dim[i], Utils.GetDirectoryName(i + 1));
   end;
 end;
-
-function TForm1.GetDirectoryName(NumGroup: integer): string;
-var
-  SR: TSearchRec;
-  FindRes: integer;
-  SL: TStringList;
-  AFileMask, FileStr, FileRootStr: string;
-begin
-  SL:= TStringList.Create;
-  try
-    try
-      AFileMask:= IntToStr(NumGroup) + ')*';
-      FileRootStr:= ExtractFilePath(ParamStr(0)) + '\Prices\';
-      FindRes:= FindFirst(FileRootStr + AFileMask, faAnyFile, SR);
-      while FindRes = 0 do begin
-        SR.Name:= FileRootStr + SR.Name ;
-        SL.Add(SR.Name);
-        FindRes:= FindNext(SR);
-      end;
-    finally
-      FindClose(SR);
-    end;
-    if SL.Count = 1 then begin
-      FileStr:= SL[0];
-    end else begin
-      ShowMessage('Directory for group ' + IntToStr(NumGroup) + 'not finded.');
-      FileStr:= '';
-    end;
-  finally
-    FreeAndNil(SL);
-  end;
-  Result:= FileStr + '\';
-end;
-
 
 procedure TForm1.OpenPriceFileByName(var APriceData: TArrPriceData; AFileName: string);
 var
@@ -452,28 +415,6 @@ begin
 end;
 
 
-procedure TForm1.qSort(var A: TArrayReal; min, max: Integer);
-var
-  i, j: integer;
-  supp, tmp: real;
-begin
-  supp:=A[max-((max-min) div 2)];
-  i:=min; j:=max;
-  while i<j do
-    begin
-      while A[i]<supp do i:=i+1;
-      while A[j]>supp do j:=j-1;
-      if i<=j then
-        begin
-          tmp:=A[i]; A[i]:=A[j]; A[j]:=tmp;
-          i:=i+1; j:=j-1;
-        end;
-    end;
-  if min<j then qSort(A, min, j);
-  if i<max then qSort(A, i, max);
-end;
-
-
 // Performs a number of simulations to calculate bankruptcies of UPRO.
 // Creates multiple threads based on CPU cores count.
 procedure TForm1.CalcNumBankruptcySimple(ANumSim, ANumDay: integer; ACapital, ARasxod: real; StartRatio: PRatio);
@@ -584,6 +525,7 @@ begin    // new version from 2.01
 end;
 
 
+// Calculates UPRO persent using Bisection algorithm, to match the giver risk.
 function TForm1.FindBestRatio(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
 var
   CurRatio, First, Last, InnerNumSim: integer;
@@ -643,6 +585,7 @@ begin
 end;
 
 
+// Multiplies the results, calculated by CreateArrVolGroup, to a sertain koeficient, trying to find the right koeficient to get the correct risk.
 function TForm1.FindBestRatio_12DayVol(ACapital, ARasxod, APercent: real; ANumDay, ANumSim: integer): integer;  // Result 0..100 Perc for UPRO
 var
   CurRatio, First, Last, InnerNumSim: integer;
@@ -780,6 +723,14 @@ begin
 end;
 }
 
+
+// Returns an array with the optimal number of UPROs for each group. The first group is for the calm market, so it gives almost always 100% UPRO, the last groups mean
+// volatile market, so in opposite - almost always gives 0% UPRO.
+// First, we take the 1st group and distanse of all remaining life, and randomly take numbers from the 1st group where the volatility is low. 
+// As a result, we find out the best ratio for this settings. This is an artificial test, an assumption. And so we do 23 times.
+// Thus, we got the first approximation of our answer - what should be the 23 possible UPRO persents in our portfolio for our risk.
+// Further, taking the 1st approximation, we simulate prices where there may be different quotes, and again calculate 23 times.
+// The second step is to adjust these 23 quotes higher or lower to match the given risk.
 function TForm1.CreateArrVolGroup(APercent: real): TArrVolGroup;
   
   procedure FillAllGroups(First, Last: integer);  // recurce
@@ -892,6 +843,8 @@ begin
     StopTimer('Calculating finished.');
 end;
 
+
+// Calculates table with risks, that will be used for all future life.
 procedure TForm1.CalculateRiskForNewUser();
 begin
   with CurParameter, FormNewUser do begin
@@ -1081,6 +1034,7 @@ begin
   //Memo1.Lines.Add(Format('Bankruptcy with ProbDeath: %f ', [(SumaBankr2) * 100 / NumSim])) ;
 end;
 
+
 procedure TForm1.CreateTableDayRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
 var i, k, t: integer;
   //UPROBankrot: integer;
@@ -1175,6 +1129,11 @@ begin
 end;
 
 
+// This is a universal function - it counts our simulations and outputs results into two dynamic arrays.
+// 1. First array is the length of the number of days, and it stores the number of bankruptcies that happened on a given day.
+// Each day has the number of bankruptcies. If we sum all these days and divide by the number of simulations, we get the percentage of bankruptcies excluding survivorship.
+// We can also find out the percentage of bankruptcies including survivorship using the survivorship table.
+// 2. The second array is the length of the number of simulations - it stores the Final Capital for each simulation.
 procedure TForm1.CalculateRiskEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
 var
   t, threadLimit, stepsThread: integer;
@@ -1208,6 +1167,7 @@ begin
 end;
 
 
+// This procedure is executed inside a separate thread.
 procedure TForm1.CalculateRiskEVInternal(FirstSeed: Cardinal; AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSimStart, ANumSimEnd: integer; ArrBankr: PArrayInt; ArrayEV: PArrayReal);
 var
   i, k : integer;
@@ -1267,6 +1227,7 @@ begin
 end;
 
 
+// Calculates total EV and percentiles, using results in one of arrays, generated by CalculateRiskEV.
 procedure TForm1.CalculateEV(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer);
 var i, t: integer;
   Total_EV, Total_Day: real;
@@ -1332,6 +1293,9 @@ begin
 end;
 
 
+// Calculate bankruptcies taking into account survivorship (death probability), using results in one of arrays, generated by CalculateRiskEV.
+// It calculates the risk of general bankruptcy (when Capital equals zero) for a given capital.
+// If this risk is too high, it calculates the minimum capital for the given risk.
 function TForm1.CalculateRisk(AStartCapital, ARasxod, AMyBankr: real; ANumDay, ANumSim: integer): boolean;
 var
   CurRisk: real;
@@ -1843,7 +1807,7 @@ end;
 
 procedure TForm1.ButtonAddDayClick(Sender: TObject);
 begin
-  if not CheckEmptyAndZero(EditSNP500, 'SnP500') then Exit;
+  if not CheckEmptyAndLimit(EditSNP500, 'SnP500') then Exit;
 
   AddSNP500(DateTimePicker2.Date, StrToFloat(EditSNP500.Text));
   ShowGridSNP500;
@@ -1891,12 +1855,11 @@ end;
 function TForm1.CheckAllEdits(): bool;
 begin
   Result := false;
-  if not CheckEmptyAndZero(EditTodayRisk, 'Today Risk') then Exit;
-  if not CheckEmptyAndZero(EditStocks, 'Stocks') then Exit;
-  if not CheckEmptyAndZero(EditGold, 'Gold', true) then Exit;
-  if not CheckEmptyAndZero(EditMonthlyExpences, 'Monthly Expences') then Exit;
-  if not CheckEmptyAndZero(EditNumSim, 'Number of Simulations') then Exit;
-  if not CheckEmptyAndZero(EditUPROBankr, 'UPRO Daily Fail') then Exit;
+  if not CheckEmptyAndLimit(EditStocks, 'Stocks') then Exit;
+  if not CheckEmptyAndLimit(EditGold, 'Gold', -1) then Exit;
+  if not CheckEmptyAndLimit(EditMonthlyExpences, 'Monthly Expences') then Exit;
+  if not CheckEmptyAndLimit(EditNumSim, 'Number of Simulations', 999) then Exit;
+  if not CheckEmptyAndLimit(EditUPROBankr, 'UPRO Daily Fail') then Exit;
   Result := true;
 end;
 
