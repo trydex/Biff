@@ -136,7 +136,7 @@ begin
   if not CheckEmptyAndLimit(EditStocks, 'Stocks') then Exit;
   if not CheckEmptyAndLimit(EditGold, 'Gold', -1) then Exit;
   if not CheckEmptyAndLimit(EditMonthlyExpences, 'Monthly Expences') then Exit;
-  if not CheckEmptyAndLimit(EditNumSim, 'Number of Simulations') then Exit;
+  if not CheckEmptyAndLimit(EditNumSim, 'Number of Simulations', 999) then Exit;
   if not CheckEmptyAndLimit(EditUPROBankr, 'UPRO Daily Fail') then Exit;
 
   MessageOnQuitNewUser:= 'Do you really want to close?'; 

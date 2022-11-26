@@ -825,7 +825,7 @@ begin
     Exit;
   end;
 
-  if StrToInt(edit.Text) <= limit then
+  if StrToFloat(edit.Text) <= limit then
   begin
     ShowMessage('Field ' + name + ' should be greater then ' + FloatToStr(limit) + '!');
     Result := false;

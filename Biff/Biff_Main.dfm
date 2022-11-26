@@ -58,16 +58,16 @@ object Form1: TForm1
   object Label9: TLabel
     Left = 16
     Top = 184
-    Width = 83
+    Width = 80
     Height = 13
-    Caption = 'Total Bankroll  ($)'
+    Caption = 'Total Bankroll ($)'
   end
   object Label2: TLabel
     Left = 16
     Top = 216
-    Width = 102
+    Width = 101
     Height = 13
-    Caption = 'Monthly Expences ($)'
+    Caption = 'Monthly Expenses ($)'
   end
   object Label3: TLabel
     Left = 16
